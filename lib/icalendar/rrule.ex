@@ -183,7 +183,6 @@ defmodule ICalendar.RRULE do
   end
 
   def parse_attr(%{key: key, value: value}, accumulator) do
-
     key =
       case Map.fetch(@string_to_atom_keys, key) do
         {:ok, atom} -> atom
@@ -207,7 +206,7 @@ defmodule ICalendar.RRULE do
       iex> RRULE.parse_value_as_list("a,b,c")
       ["a", "b", "c"]
 
-      iex> RRULE.parse_value_as_list("1,2,3", &(String.to_integer(&1)))
+      iex> RRULE.parse_value_as_list("1,2,3", &String.to_integer/1)
       [1,2,3]
   """
   def parse_value_as_list(value), do: parse_value_as_list(value, &(&1))
@@ -253,9 +252,7 @@ defmodule ICalendar.RRULE do
     end
   end
   def validate_param(prop = %Property{key: "BYSECOND", value: value}) do
-    value =
-      value
-      |> parse_value_as_list(&(String.to_integer(&1)))
+    value = parse_value_as_list(value, &String.to_integer/1)
 
     validation =
       value
@@ -271,9 +268,7 @@ defmodule ICalendar.RRULE do
     end
   end
   def validate_param(prop = %Property{key: "BYMINUTE", value: value}) do
-    value =
-      value
-      |> parse_value_as_list(&(String.to_integer(&1)))
+    value = parse_value_as_list(value, &String.to_integer/1)
 
     validation =
       value
@@ -289,9 +284,7 @@ defmodule ICalendar.RRULE do
     end
   end
   def validate_param(prop = %Property{key: "BYHOUR", value: value}) do
-    value =
-      value
-      |> parse_value_as_list(&(String.to_integer(&1)))
+    value = parse_value_as_list(value, &String.to_integer/1)
 
     validation =
       value
@@ -307,9 +300,7 @@ defmodule ICalendar.RRULE do
     end
   end
   def validate_param(prop = %Property{key: "BYMONTHDAY", value: value}) do
-    value =
-      value
-      |> parse_value_as_list(&(String.to_integer(&1)))
+    value = parse_value_as_list(value, &String.to_integer/1)
 
     validation =
       value
@@ -325,9 +316,7 @@ defmodule ICalendar.RRULE do
     end
   end
   def validate_param(prop = %Property{key: "BYYEARDAY", value: value}) do
-    value =
-      value
-      |> parse_value_as_list(&(String.to_integer(&1)))
+    value = parse_value_as_list(value, &String.to_integer/1)
 
     validation =
       value
@@ -344,9 +333,7 @@ defmodule ICalendar.RRULE do
     end
   end
   def validate_param(prop = %Property{key: "BYWEEKNO", value: value}) do
-    value =
-      value
-      |> parse_value_as_list(&(String.to_integer(&1)))
+    value = parse_value_as_list(value, &String.to_integer/1)
 
     validation =
       value
@@ -362,9 +349,7 @@ defmodule ICalendar.RRULE do
     end
   end
   def validate_param(prop = %Property{key: "BYSETPOS", value: value}) do
-    value =
-      value
-      |> parse_value_as_list(&(String.to_integer(&1)))
+    value = parse_value_as_list(value, &String.to_integer/1)
 
     validation =
       value
@@ -382,14 +367,10 @@ defmodule ICalendar.RRULE do
   end
   def validate_param(prop = %Property{key: "BYDAY", value: value}) do
     # Upcase the values
-    value =
-      value
-      |> parse_value_as_list(&(String.upcase(&1)))
+    value = parse_value_as_list(value, &String.upcase/1)
 
     # Check to see if they're in the list of days
-    validation =
-      value
-      |> Enum.map(&(&1 in Map.keys(@days)))
+    validation = Enum.map(value, &(&1 in Map.keys(@days)))
 
     # If they all are, then fetch the value for all of them and add them to the
     # property.
@@ -415,11 +396,7 @@ defmodule ICalendar.RRULE do
     end
   end
   def validate_param(prop = %Property{key: "BYMONTH", value: value}) do
-    value =
-      value
-      |> parse_value_as_list(
-        &(String.to_integer(&1))
-      )
+    value = parse_value_as_list(value, &String.to_integer/1)
 
     validation =
       value
