@@ -367,15 +367,29 @@ defmodule ICalendar.RRULE do
   end
   def validate_param(prop = %Property{key: "BYDAY", value: value}) do
     # Upcase the values
-    value = parse_value_as_list(value, &String.upcase/1)
+    value = parse_value_as_list(value, fn val ->
+      val
+      |> String.upcase()
+      |> Integer.parse()
+      |> case do
+        :error -> val
+        tuple -> tuple
+      end
+    end)
 
     # Check to see if they're in the list of days
-    validation = Enum.map(value, &(&1 in Map.keys(@days)))
+    validation = Enum.map(value, fn
+      {_num, val} -> val in Map.keys(@days)
+      val -> val in Map.keys(@days)
+    end)
 
     # If they all are, then fetch the value for all of them and add them to the
     # property.
     case false in validation do
-      false -> %{prop | value: Enum.map(value, &(Map.fetch!(@days, &1)))}
+      false -> %{prop | value: Enum.map(value, fn
+        {num, val} -> {num, Map.fetch!(@days, val)}
+        val -> Map.fetch!(@days, val)
+      end)}
       true -> {
         :error,
         prop,
