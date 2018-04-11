@@ -6,6 +6,13 @@ defmodule ICalendar.RRULE do
   alias ICalendar.Property
   alias ICalendar.Util.Deserialize
 
+  def invert_map(map = %{}) do
+    map
+    |> Enum.reduce(%{}, fn({key, value}, acc) ->
+      Map.put(acc, value, key)
+    end)
+  end
+
   @frequencies %{
     "SECONDLY" => :secondly,
     "MINUTELY" => :minutely,
@@ -76,21 +83,21 @@ defmodule ICalendar.RRULE do
   Produce inverse of @string_to_atom_keys at compile time
   """
   defmacro _atom_to_string_keys do
-    quote do: Deserialize.invert_map(@string_to_atom_keys)
+    quote do: invert_map(@string_to_atom_keys)
   end
 
   @doc ~S"""
   Produce inverse of @frequencies at compile time
   """
   defmacro _inverted_frequencies do
-    quote do: Deserialize.invert_map(@frequencies)
+    quote do: invert_map(@frequencies)
   end
 
   @doc ~S"""
   Produce inverse of @days at compile time
   """
   defmacro _inverted_days do
-    quote do: Deserialize.invert_map(@days)
+    quote do: invert_map(@days)
   end
 
   @doc ~S"""

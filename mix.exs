@@ -1,30 +1,30 @@
-defmodule ICalendar.Mixfile do
+defmodule VObject.Mixfile do
   use Mix.Project
 
-  @version "0.7.0"
+  @version "0.1.0"
 
   def project do
     [
-      app: :icalendar,
+      app: :vobject,
       version: @version,
       elixir: "~> 1.3",
       build_embedded: Mix.env == :prod,
       start_permanent: Mix.env == :prod,
       deps: deps(),
 
-      name: "ICalendar",
-      source_url: "https://github.com/lpil/icalendar",
-      description: "An ICalendar file generator",
+      name: "vobject",
+      source_url: "https://github.com/polyfox/vobject",
+      description: "Parse and manipulate iCalendar (RFC5545) and vCard objects (RFC6350)",
       package: [
-        maintainers: ["Louis Pilfold"],
+        maintainers: ["Blaž Hrastnik"],
         licenses: ["MIT"],
-        links: %{ "GitHub" => "https://github.com/lpil/icalendar" },
+        links: %{ "GitHub" => "https://github.com/polyfox/vobject" },
       ],
     ]
   end
 
   def application do
-    [applications: [:timex]]
+    [extra_applications: [:runtime_tools]]
   end
 
   defp deps do
@@ -38,6 +38,11 @@ defmodule ICalendar.Mixfile do
       {:earmark, "~> 1.0", only: [:dev, :test]},
       # Documentation generator
       {:ex_doc, "~> 0.18", only: [:dev, :test]},
+
+      {:benchee, "~> 0.11", only: :dev},
+      {:benchee_html, "~> 0.4", only: :dev},
+
+      {:dbg, github: "fishcakez/dbg", only: :dev},
 
       # For full timezone support
       {:timex, "~> 3.0"}
