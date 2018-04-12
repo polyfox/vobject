@@ -4,7 +4,7 @@ defmodule ICalendar.RRULE do
   """
 
   alias ICalendar.Property
-  alias ICalendar.Util.Deserialize
+  alias ICalendar.Decoder
 
   def invert_map(map = %{}) do
     map
@@ -158,7 +158,7 @@ defmodule ICalendar.RRULE do
     |> String.split(";")
     |> Enum.map(fn (prop) ->
       [key, value] = String.split(prop, "=", parts: 2, trim: true)
-      [key, params] = Deserialize.retrieve_params(key)
+      [key, params] = Decoder.retrieve_params(key)
 
       %Property{key: String.upcase(key), value: value, params: params}
     end)
@@ -238,7 +238,7 @@ defmodule ICalendar.RRULE do
     end
   end
   def validate_param(prop = %Property{key: "UNTIL", value: value}) do
-    out = Deserialize.to_date(value, %{"TZID" => "Etc/UTC"})
+    out = Decoder.to_date(value, %{"TZID" => "Etc/UTC"})
     case out do
       {:ok, date} -> %{prop | value: date}
       _           -> {:error, prop, "'#{value}' is not a valid date"}
