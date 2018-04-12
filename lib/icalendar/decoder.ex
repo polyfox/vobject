@@ -1,16 +1,25 @@
 defmodule ICalendar.Decoder do
   def decode(string) do
-    string
-    |> String.replace(~r/\r?\n[ \t]/, "")
-    |> String.split(~r/\r?\n/)
-    |> Enum.reduce([], &stree/2)
-    |> parse
+    val = 
+      string
+      |> String.replace(~r/\r?\n[ \t]/, "")
+      |> String.split(~r/\r?\n/)
+      |> Enum.reduce([], &stree/2)
+      |> parse
+
+    {:ok, val}
   end
 
   @types %{
     "VEVENT" => :event,
     "VALARM" => :alarm,
-    "VCALENDAR" => :calendar
+    "VCALENDAR" => :calendar,
+    "VTODO" => :todo,
+    "VJOURNAL" => :journal,
+    "VFREEBUSY" => :freebusy,
+    "VTIMEZONE" => :timezone,
+    "STANDARD" => :standard,
+    "DAYLIGHT" => :daylight
   }
 
   @properties [
@@ -103,7 +112,7 @@ defmodule ICalendar.Decoder do
     summary:          :text,
     transp:           :text,
     trigger:          :duration, # can be date_time
-    tzid:             :tzid,
+    tzid:             :text,
     tzname:           :text,
     tzoffsetfrom:     :utc_offset,
     tzoffsetto:       :utc_offset,
@@ -228,9 +237,8 @@ defmodule ICalendar.Decoder do
   end
 
   defp parse_val(val, :date, params) do
-    {:ok, date} = to_date(val, params)
+    {:ok, date} = Timex.parse(val, "{YYYY}{0M}{0D}")
     date
-    # TODO
   end
 
   defp parse_val(val, :date_time, params) do
@@ -269,13 +277,15 @@ defmodule ICalendar.Decoder do
   end
 
   defp parse_val(val, :recur, _params) do
-    # TODO
+    {:ok, rrule} = ICalendar.RRULE.deserialize(val)
+    rrule
   end
 
   defp parse_val(val, :text, _params), do: unescape(val)
 
-  defp parse_val(val, :time, _params) do
-    # TODO
+  defp parse_val(val, :time, params) do
+    {:ok, time} = to_time(val, params)
+    time
   end
 
   defp parse_val(val, :uri, _params), do: val
@@ -364,6 +374,23 @@ defmodule ICalendar.Decoder do
     to_date(date_string, %{"TZID" => "Etc/UTC"})
   end
 
+  def to_time(time_string, %{"TZID" => timezone}) do
+    time_string =
+      case String.last(time_string) do
+        "Z" -> time_string
+        _   -> time_string <> "Z"
+      end
+
+    Timex.parse(time_string <> timezone, "{h24}{m}{s}Z{Zname}")
+  end
+
+  def to_time(time_string, %{}) do
+    to_time(time_string, %{"TZID" => "Etc/UTC"})
+  end
+
+  def to_time(time_string) do
+    to_time(time_string, %{"TZID" => "Etc/UTC"})
+  end
 
   @doc ~S"""
 

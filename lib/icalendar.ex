@@ -5,7 +5,7 @@ defmodule ICalendar do
 
   defstruct events: []
   defdelegate to_ics(events), to: ICalendar.Serialize
-  defdelegate from_ics(events), to: ICalendar.Deserialize
+  defdelegate decode(string), to: ICalendar.Decoder
 
 
   defmodule Address do
