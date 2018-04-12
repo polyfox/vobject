@@ -1,6 +1,6 @@
 defmodule ICalendar.Decoder do
   def decode(string) do
-    val = 
+    val =
       string
       |> String.replace(~r/\r?\n[ \t]/, "")
       |> String.split(~r/\r?\n/)
@@ -247,7 +247,11 @@ defmodule ICalendar.Decoder do
   end
 
   defp parse_val(val, :duration, _params) do
-    {:ok, val} = Timex.Parse.Duration.Parsers.ISO8601Parser.parse(val)
+    {:ok, val} =
+      val
+      |> String.trim_trailing("T") # for some reason 1PDT is valid
+      |> Timex.Parse.Duration.Parsers.ISO8601Parser.parse
+
     val
   end
 
@@ -291,10 +295,13 @@ defmodule ICalendar.Decoder do
   defp parse_val(val, :uri, _params), do: val
 
   defp parse_val(val, :utc_offset, _params) do
-    # TODO
+    # TODO (not sure what the best way to store this is)
+    val
   end
 
+  # this could be x-vals
   defp parse_val(val, nil, _), do: val
+
   defp parse_val(val, type, _) do
     IO.puts "unknown type! #{inspect type}"
     val
@@ -373,6 +380,7 @@ defmodule ICalendar.Decoder do
   def to_date(date_string) do
     to_date(date_string, %{"TZID" => "Etc/UTC"})
   end
+
 
   def to_time(time_string, %{"TZID" => timezone}) do
     time_string =
