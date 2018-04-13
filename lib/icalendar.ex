@@ -7,22 +7,6 @@ defmodule ICalendar do
   defdelegate to_ics(events), to: ICalendar.Serialize
   defdelegate decode(string), to: ICalendar.Decoder
 
-
-  defmodule Address do
-    defstruct uri: nil,
-      cn: nil,
-      cutype: nil,
-      delegated_from: nil,
-      delegated_to: nil,
-      dir: nil,
-      member: nil,
-      partstat: nil,
-      role: nil,
-      rsvp: nil,
-      sent_by: nil,
-      language: nil
-  end
-
   @doc """
   To create a Phoenix/Plug controller and view that output ics format:
   Add to your config.exs:

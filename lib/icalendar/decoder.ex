@@ -175,7 +175,7 @@ defmodule ICalendar.Decoder do
     case String.split(line, ":", parts: 2, trim: true) do
       [key, val] ->
         [key, params] = retrieve_params(key)
-        [[{String.upcase(key), val, params} | col] | stack]
+        [[{to_key(String.upcase(key)), val, params} | col] | stack]
     end
   end
 
@@ -198,8 +198,8 @@ defmodule ICalendar.Decoder do
 
   # matches a property
   defp parse([{key, val, params} | attrs], acc) do
-    key = to_key(key)
-    val = parse_vals(val, @prop_types[key], params)
+    {type, params} = determine_type(key, params)
+    val = {parse_vals(val, type, params), params, type}
 
     l = Map.get(acc, key)
     if l do
@@ -212,16 +212,18 @@ defmodule ICalendar.Decoder do
 
   # --------
 
+  # VALUE can override the default type
+  defp determine_type(_key, %{value: type} = params) do
+    {to_key(type), Map.drop(params, [:value])}
+  end
+  defp determine_type(key, params), do: {@prop_types[key], params}
+
   defp parse_vals(val, type, params) do
+    # TODO: ; to tuple, , to array
     case String.split(val, ~r/(?<!\\)[;,]/) do
       [val] -> parse_val(val, type, params)
       vals -> Enum.map(vals, fn val -> parse_val(val, type, params) end)
     end
-  end
-
-  # if the type was changed, parse it correctly
-  defp parse_val(val, _type, %{value: type} = params) do
-    parse_val(val, to_key(type), Map.drop(params, [:value]))
   end
 
   defp parse_val(val, :binary, %{encoding: "BASE64"}) do
@@ -232,8 +234,7 @@ defmodule ICalendar.Decoder do
   defp parse_val("FALSE", :boolean, _params), do: false
 
   defp parse_val(val, :cal_address, params) do
-    %ICalendar.Address{uri: val}
-    |> Map.merge(params)
+    val
   end
 
   defp parse_val(val, :date, params) do
@@ -313,7 +314,7 @@ defmodule ICalendar.Decoder do
 
       iex> ICalendar.Decoder.retrieve_params(
       ...>   "DTSTART;TZID=America/Chicago")
-      ["DTSTART", %{"TZID" => "America/Chicago"}]
+      ["DTSTART", %{tzid: "America/Chicago"}]
 
   It should be able to handle multiple parameters per key:
 
@@ -363,7 +364,7 @@ defmodule ICalendar.Decoder do
       ...> [Timex.to_erl(date), date.time_zone]
       [{{1998, 1, 19}, {2, 0, 0}}, "America/Chicago"]
   """
-  def to_date(date_string, %{"TZID" => timezone}) do
+  def to_date(date_string, %{tzid: timezone}) do
     date_string =
       case String.last(date_string) do
         "Z" -> date_string
@@ -374,15 +375,15 @@ defmodule ICalendar.Decoder do
   end
 
   def to_date(date_string, %{}) do
-    to_date(date_string, %{"TZID" => "Etc/UTC"})
+    to_date(date_string, %{tzid: "Etc/UTC"})
   end
 
   def to_date(date_string) do
-    to_date(date_string, %{"TZID" => "Etc/UTC"})
+    to_date(date_string, %{tzid: "Etc/UTC"})
   end
 
 
-  def to_time(time_string, %{"TZID" => timezone}) do
+  def to_time(time_string, %{tzid: timezone}) do
     time_string =
       case String.last(time_string) do
         "Z" -> time_string

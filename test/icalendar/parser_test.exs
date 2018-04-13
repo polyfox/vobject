@@ -113,12 +113,13 @@ defmodule ICalendar.ParserTest do
 
   test "failing negative duration" do
     attr = "TRIGGER;RELATED=START:-PT10M"
-    res = Decoder.parse_attr(str)
+    res = Decoder.parse_attr(attr)
   end
 
   test "failing duration 1PDT" do
     str = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//PYVOBJECT//NONSGML Version 1//EN\nBEGIN:VEVENT\nUID:put-6@example.com\nDTSTART;VALUE=DATE:20190427\nDURATION:P1DT\nDTSTAMP:20051222T205953Z\nX-TEST;CN=George Herman ^'Babe^' Ruth:test\nX-TEXT;P=Hello^World:test\nSUMMARY:event 6\nEND:VEVENT\nEND:VCALENDAR\n"
     res = Decoder.decode(str)
+    IO.inspect res
   end
 
 end
