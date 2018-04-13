@@ -218,7 +218,7 @@ defmodule ICalendar.Decoder do
   end
   defp determine_type(key, params), do: {@prop_types[key], params}
 
-  defp parse_vals(val, type, params) do
+  def parse_vals(val, type, params) do
     # TODO: ; to tuple, , to array
     case String.split(val, ~r/(?<!\\)[;,]/) do
       [val] -> parse_val(val, type, params)
@@ -226,29 +226,41 @@ defmodule ICalendar.Decoder do
     end
   end
 
-  defp parse_val(val, :binary, %{encoding: "BASE64"}) do
+  def parse_val(val, :binary, %{encoding: "BASE64"}) do
     Base.decode64!(val)
   end
 
-  defp parse_val("TRUE", :boolean, _params), do: true
-  defp parse_val("FALSE", :boolean, _params), do: false
+  def parse_val("TRUE", :boolean, _params), do: true
+  def parse_val("FALSE", :boolean, _params), do: false
 
-  defp parse_val(val, :cal_address, params) do
+  def parse_val(val, :cal_address, params) do
     # TODO
     val
   end
 
-  defp parse_val(val, :date, params) do
+  def parse_val(val, :date, params) do
     {:ok, date} = Timex.parse(val, "{YYYY}{0M}{0D}")
     date
   end
 
-  defp parse_val(val, :date_time, params) do
+  def parse_val(val, :date_time, params) do
     {:ok, date} = to_date(val, params)
     date
   end
 
-  defp parse_val(val, :duration, _params) do
+  # negative duration
+  def parse_val("-" <> val, :duration, params) do
+    val
+    |> parse_val(:duration, params)
+    |> Timex.Duration.invert()
+  end
+
+  # strip plus
+  def parse_val("+" <> val, :duration, params) do
+    parse_val(val, :duration, params)
+  end
+
+  def parse_val(val, :duration, _params) do
     {:ok, val} =
       val
       |> String.trim_trailing("T") # for some reason 1PDT is valid
@@ -257,17 +269,17 @@ defmodule ICalendar.Decoder do
     val
   end
 
-  defp parse_val(val, :float, _params) do
+  def parse_val(val, :float, _params) do
     {f, ""} = Float.parse(val)
     f
   end
 
-  defp parse_val(val, :integer, _params) do
+  def parse_val(val, :integer, _params) do
     {f, ""} = Integer.parse(val)
     f
   end
 
-  defp parse_val(val, :period, _params) do
+  def parse_val(val, :period, _params) do
     [from, to] = String.split(val, "/", parts: 2, trim: true)
 
     from = parse_val(from, :date_time, %{})
@@ -282,29 +294,29 @@ defmodule ICalendar.Decoder do
     Timex.Interval.new(from: from, until: to)
   end
 
-  defp parse_val(val, :recur, _params) do
+  def parse_val(val, :recur, _params) do
     {:ok, rrule} = ICalendar.RRULE.deserialize(val)
     rrule
   end
 
-  defp parse_val(val, :text, _params), do: unescape(val)
+  def parse_val(val, :text, _params), do: unescape(val)
 
-  defp parse_val(val, :time, params) do
+  def parse_val(val, :time, params) do
     {:ok, time} = to_time(val, params)
     time
   end
 
-  defp parse_val(val, :uri, _params), do: val
+  def parse_val(val, :uri, _params), do: val
 
-  defp parse_val(val, :utc_offset, _params) do
+  def parse_val(val, :utc_offset, _params) do
     # TODO (not sure what the best way to store this is)
     val
   end
 
   # this could be x-vals
-  defp parse_val(val, nil, _), do: val
+  def parse_val(val, nil, _), do: val
 
-  defp parse_val(val, type, _) do
+  def parse_val(val, type, _) do
     IO.puts "unknown type! #{inspect type}"
     val
   end

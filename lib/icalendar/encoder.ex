@@ -62,7 +62,12 @@ defmodule ICalendar.Encoder do
   end
 
   def encode_val(val, :duration) do
-    Timex.Format.Duration.Formatter.format(val)
+    string = Timex.Format.Duration.Formatter.format(val)
+    if (val.seconds < 0) || (val.megaseconds < 0) || (val.microseconds < 0) do
+      "-" <> string
+    else
+      string
+    end
   end
 
   def encode_val(val, :float) do
