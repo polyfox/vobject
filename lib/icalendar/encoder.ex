@@ -12,19 +12,22 @@ defmodule ICalendar.Encoder do
     daylight: "DAYLIGHT",
   }
 
+  @doc "Encode into iCal format."
   def encode(obj) do
     encode_component(obj)
-    |> List.flatten
-    |> Enum.join("\n")
+    |> IO.iodata_to_binary
   end
 
+  @doc "Encode a component."
+  @spec encode_component({type ::atom, props :: map}) :: iodata
   def encode_component({type, props}) do
     key = @types[type]
     [
       "BEGIN:#{key}",
+      "\n",
       Enum.map(props, fn
-        {key, vals} when is_list(vals) -> Enum.map(vals, fn val -> encode_prop(key, val) end)
-        {key, val} -> encode_prop(key, val)
+        {key, vals} when is_list(vals) -> Enum.map(vals, fn val -> [encode_prop(key, val), "\n"] end)
+        {key, val} -> [encode_prop(key, val), "\n"]
       end),
       "END:#{key}"
     ]
@@ -37,6 +40,7 @@ defmodule ICalendar.Encoder do
     |> String.replace("_", "-")
   end
 
+  @doc "Encode a property."
   def encode_prop(key, %{} = component) do
     encode_component({key, component})
   end
@@ -50,17 +54,20 @@ defmodule ICalendar.Encoder do
     case encode_val(val, type) do
       {val, extra_params} ->
         # take any extra params the field encoding might have given
-        encode_kparam(key, Map.merge(params, extra_params)) <> ":" <> val
+        [encode_kparam(key, Map.merge(params, extra_params)), ":", val]
       val ->
-        encode_kparam(key, params) <> ":" <> val
+        [encode_kparam(key, params), ":", val]
     end
   end
 
+  @doc "Encode a key together with parameters."
   def encode_kparam(key, params) when params == %{}, do: encode_key(key)
   def encode_kparam(key, params) do
-    encode_key(key) <> ";" <> encode_params(params)
+    [encode_key(key), ";", encode_params(params)]
   end
 
+  @doc "Encode parameters."
+  @spec encode_params(params :: map) :: String.t
   def encode_params(params) do
     params
     # TODO escape parameter vals (^)
@@ -70,6 +77,7 @@ defmodule ICalendar.Encoder do
 
   # -----------
 
+  @doc "Encode a value."
   def encode_val(vals, type) when is_list(vals) do
     vals
     |> Enum.map(&encode_val(&1, type))
@@ -149,6 +157,8 @@ defmodule ICalendar.Encoder do
       %{tzid: val.time_zone}
     }
   end
+
+  def encode_val(val, :uri), do: val
 
   def encode_val(val, :utc_offset) do
     # TODO once encoding is decided
