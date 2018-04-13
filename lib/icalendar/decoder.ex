@@ -202,12 +202,12 @@ defmodule ICalendar.Decoder do
   end
 
   def parse_val(val, :date, params) do
-    {:ok, date} = Timex.parse(val, "{YYYY}{0M}{0D}")
+    {:ok, date} = to_date(val, params)
     date
   end
 
   def parse_val(val, :date_time, params) do
-    {:ok, date} = to_date(val, params)
+    {:ok, date} = to_datetime(val, params)
     date
   end
 
@@ -313,54 +313,74 @@ defmodule ICalendar.Decoder do
 
   It should be able to handle dates from the past:
 
-      iex> {:ok, date} = ICalendar.Decoder.to_date("19930407T153022Z")
+      iex> {:ok, date} = ICalendar.Decoder.to_datetime("19930407T153022Z")
       ...> Timex.to_erl(date)
       {{1993, 4, 7}, {15, 30, 22}}
 
   As well as the future:
 
-      iex> {:ok, date} = ICalendar.Decoder.to_date("39930407T153022Z")
+      iex> {:ok, date} = ICalendar.Decoder.to_datetime("39930407T153022Z")
       ...> Timex.to_erl(date)
       {{3993, 4, 7}, {15, 30, 22}}
 
   And should return error for incorrect dates:
 
-      iex> ICalendar.Decoder.to_date("1993/04/07")
+      iex> ICalendar.Decoder.to_datetime("1993/04/07")
       {:error, "Expected `2 digit month` at line 1, column 5."}
 
   It should handle timezones from  the Olson Database:
 
-      iex> {:ok, date} = ICalendar.Decoder.to_date("19980119T020000",
+      iex> {:ok, date} = ICalendar.Decoder.to_datetime("19980119T020000",
       ...> %{tzid: "America/Chicago"})
       ...> [Timex.to_erl(date), date.time_zone]
       [{{1998, 1, 19}, {2, 0, 0}}, "America/Chicago"]
   """
-  def to_date(date_string, %{tzid: timezone}) do
-    date_string =
+  def to_datetime(date_string, %{tzid: timezone}) do
+    {:ok, naive_date} =
       case String.last(date_string) do
-        "Z" -> date_string
-        _   -> date_string <> "Z"
+        "Z" ->
+          String.trim_trailing(date_string, "Z")
+        _   ->
+          date_string
       end
+      |> to_datetime()
 
-    Timex.parse(date_string <> timezone, "{YYYY}{0M}{0D}T{h24}{m}{s}Z{Zname}")
-    # This is slow
-    #
-    # Timex.Parse.DateTime.Parser.parse/3                                  7      51.783       0.036
-    # Timex.Parse.DateTime.Parser.parse!/3                               7      51.783       0.036  <--
-    # Timex.Parse.DateTime.Tokenizers.Default.tokenize/1               7      29.750       0.063
-    # Timex.Parse.DateTime.Parser.do_parse/3                           7      21.997       0.148
-    #
-    # since it's a rigid format, use binary matching
+    {:ok, Timex.to_datetime(naive_date, timezone)}
   end
 
-  def to_date(date_string, %{}) do
-    to_date(date_string, %{tzid: "Etc/UTC"})
+  def to_datetime(date_string, %{}) do
+    to_datetime(date_string, %{tzid: "Etc/UTC"})
   end
 
-  def to_date(date_string) do
-    to_date(date_string, %{tzid: "Etc/UTC"})
+  def to_datetime(string) do
+    with <<year::4-bytes, month::2-bytes, day::2-bytes, ?T, rest::binary>> <- string,
+         <<hour::2-bytes, min::2-bytes, sec::2-bytes, _rest::binary>> <- rest,
+         {year, ""} <- Integer.parse(year),
+         {month, ""} <- Integer.parse(month),
+         {day, ""} <- Integer.parse(day),
+         {hour, ""} <- Integer.parse(hour),
+         {minute, ""} <- Integer.parse(min),
+         {second, ""} <- Integer.parse(sec),
+         {:ok, date} <- Date.new(year, month, day),
+         {:ok, time} <- Time.new(hour, minute, second) do
+      datetime = NaiveDateTime.new(date, time)
+    else
+      {:error, reason} -> {:error, reason}
+      _ -> {:error, :invalid_format}
+    end
   end
 
+
+  def to_date(string) do
+    with <<year::4-bytes, month::2-bytes, day::2-bytes>> <- string,
+         {year, ""} <- Integer.parse(year),
+         {month, ""} <- Integer.parse(month),
+         {day, ""} <- Integer.parse(day) do
+         Date.new(year, month, day)
+    else
+      {:error, reason} -> {:error, reason}
+      _ -> {:error, :invalid_format}
+    end
 
   def to_time(time_string, %{tzid: timezone}) do
     time_string =
