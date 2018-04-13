@@ -31,10 +31,11 @@ defmodule ICalendar.Encoder do
       "BEGIN:#{key}",
       "\n",
       Enum.map(props, fn
-        {key, vals} when is_list(vals) -> Enum.map(vals, fn val -> [encode_prop(key, val), "\n"] end)
-        {key, val} -> [encode_prop(key, val), "\n"]
+        {key, vals} when is_list(vals) -> Enum.map(vals, fn val -> encode_prop(key, val) end)
+        {key, val} -> encode_prop(key, val)
       end),
-      "END:#{key}"
+      "END:#{key}",
+      "\n",
     ]
   end
 
@@ -59,9 +60,9 @@ defmodule ICalendar.Encoder do
     case encode_val(val, type) do
       {val, extra_params} ->
         # take any extra params the field encoding might have given
-        [encode_kparam(key, Map.merge(params, extra_params)), ":", val]
+        [encode_kparam(key, Map.merge(params, extra_params)), ":", val, "\n"]
       val ->
-        [encode_kparam(key, params), ":", val]
+        [encode_kparam(key, params), ":", val, "\n"]
     end
   end
 
