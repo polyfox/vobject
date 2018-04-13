@@ -1,34 +1,66 @@
 defmodule ICalendar.Encoder do
 
-  def encode({type, props}) do
-    props
-    |> Enum.map(fn
-      {key, vals} when is_list(vals) -> Enum.map(vals, fn val -> encode_prop(key, val) end)
-      {key, val} -> encode_prop(key, val)
-    end)
+  @types %{
+    event: "VEVENT",
+    alarm: "VALARM",
+    calendar: "VCALENDAR",
+    todo: "VTODO",
+    journal: "VJOURNAL",
+    freebusy: "VFREEBUSY",
+    timezone: "VTIMEZONE",
+    standard: "STANDARD",
+    daylight: "DAYLIGHT",
+  }
+
+  def encode(obj) do
+    encode_component(obj)
     |> List.flatten
+    |> Enum.join("\n")
+  end
+
+  def encode_component({type, props}) do
+    key = @types[type]
+    [
+      "BEGIN:#{key}",
+      Enum.map(props, fn
+        {key, vals} when is_list(vals) -> Enum.map(vals, fn val -> encode_prop(key, val) end)
+        {key, val} -> encode_prop(key, val)
+      end),
+      "END:#{key}"
+    ]
   end
 
   defp encode_key(key) do
     key
     |> Atom.to_string()
     |> String.upcase()
+    |> String.replace("_", "-")
   end
 
+  def encode_prop(key, %{} = component) do
+    encode_component({key, component})
+  end
+
+  # TODO: match whether it's a multi , or ; key, or per attr
+  def encode_prop(key, {vals, params, type}) when is_list(vals) do
+    Enum.map(vals, &encode_prop(key, {&1, params, type}))
+  end
 
   def encode_prop(key, {val, params, type}) do
-    Enum.join([
-      encode_kparam(key, params),
-      encode_val(val, type)
-    ], ":")
+    case encode_val(val, type) do
+      {val, extra_params} ->
+        # take any extra params the field encoding might have given
+        encode_kparam(key, Map.merge(params, extra_params)) <> ":" <> val
+      val ->
+        encode_kparam(key, params) <> ":" <> val
+    end
   end
 
-  def encode_kparam(key, %{}), do: encode_key(key)
+  def encode_kparam(key, params) when params == %{}, do: encode_key(key)
   def encode_kparam(key, params) do
     encode_key(key) <> ";" <> encode_params(params)
   end
 
-  def encode_params(params) when params == %{}, do: nil
   def encode_params(params) do
     params
     # TODO escape parameter vals (^)
@@ -45,7 +77,8 @@ defmodule ICalendar.Encoder do
   end
 
   def encode_val(val, :binary) do
-    # TODO
+    # TODO for non base64?
+    {Base.encode64!(val), %{encoding: "BASE64"}}
   end
 
   def encode_val(true, :boolean), do: "TRUE"
@@ -57,8 +90,15 @@ defmodule ICalendar.Encoder do
     Timex.format!(val, "{YYYY}{0M}{0D}")
   end
 
+  def encode_val(%{time_zone: "Etc/UTC"} = val, :date_time) do
+    Timex.format!(val, "{YYYY}{0M}{0D}T{h24}{m}{s}Z")
+  end
+
   def encode_val(val, :date_time) do
-    # TODO
+    {
+      Timex.format!(val, "{YYYY}{0M}{0D}T{h24}{m}{s}"),
+      %{tzid: val.time_zone}
+    }
   end
 
   def encode_val(val, :duration) do
@@ -80,10 +120,12 @@ defmodule ICalendar.Encoder do
 
   def encode_val(val, :period) do
     # TODO
+    ""
   end
 
   def encode_val(val, :recur) do
     #TODO:
+    ""
   end
 
   @escape ~r/\\|;|,|\n/
@@ -97,8 +139,15 @@ defmodule ICalendar.Encoder do
     end)
   end
 
+  def encode_val(%{time_zone: "Etc/UTC"} = val, :time) do
+    Timex.format!(val, "{h24}{m}{s}Z")
+  end
+
   def encode_val(val, :time) do
-    # TODO timezones
+    {
+      Timex.format!(val, "{h24}{m}{s}"),
+      %{tzid: val.time_zone}
+    }
   end
 
   def encode_val(val, :utc_offset) do
@@ -106,8 +155,5 @@ defmodule ICalendar.Encoder do
     val
   end
 
-  # TODO: replace nil with unknown
-  def encode_val(val, nil) do
-    val
-  end
+  def encode_val(val, :unknown), do: val
 end

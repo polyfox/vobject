@@ -23,17 +23,25 @@ defmodule ICalendar.EncoderTest do
     stream = File.read!("test/fixtures/event.ics")
     {:ok, res} = ICalendar.Decoder.decode(stream)
 
-    res = Encoder.encode(res)
     IO.inspect res
+    res = Encoder.encode(res)
+    IO.puts res
 
     stream = File.read!("test/fixtures/blank_description.ics")
     {:ok, res} = ICalendar.Decoder.decode(stream)
 
-    res = Encoder.encode(res)
+
     IO.inspect res
+    res = Encoder.encode(res)
+    IO.puts res
   end
 
   test "properly encode text" do
     assert Encoder.encode_val("test;me,putting\\quotes\nnow", :text) == ~S(test\;me\,putting\\quotes\nnow)
+  end
+
+  test "properly encode time" do
+    {:ok, time} = Timex.parse("173015ZAmerica/Los_Angeles", "{h24}{m}{s}Z{Zname}")
+    assert Encoder.encode_val(time, :time) == {"173015", %{tzid: "America/Los_Angeles"}}
   end
 end

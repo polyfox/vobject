@@ -216,7 +216,7 @@ defmodule ICalendar.Decoder do
   defp determine_type(_key, %{value: type} = params) do
     {to_key(type), Map.drop(params, [:value])}
   end
-  defp determine_type(key, params), do: {@prop_types[key], params}
+  defp determine_type(key, params), do: {@prop_types[key] || :unknown, params}
 
   def parse_vals(val, type, params) do
     # TODO: ; to tuple, , to array
@@ -314,12 +314,7 @@ defmodule ICalendar.Decoder do
   end
 
   # this could be x-vals
-  def parse_val(val, nil, _), do: val
-
-  def parse_val(val, type, _) do
-    IO.puts "unknown type! #{inspect type}"
-    val
-  end
+  def parse_val(val, :unknown, _), do: val
 
 
   @doc ~S"""
