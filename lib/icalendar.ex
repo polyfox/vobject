@@ -6,6 +6,7 @@ defmodule ICalendar do
   defstruct events: []
   defdelegate to_ics(events), to: ICalendar.Serialize
   defdelegate decode(string), to: ICalendar.Decoder
+  defdelegate encode(string), to: ICalendar.Encoder
 
   @doc """
   To create a Phoenix/Plug controller and view that output ics format:
