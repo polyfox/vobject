@@ -172,7 +172,7 @@ defmodule ICalendar.Decoder do
   end
 
   defp stree(line, [col | stack]) do
-    case String.split(line, ":", parts: 2, trim: true) do
+    case String.split(line, ":", parts: 2) do
       [key, val] ->
         [key, params] = retrieve_params(key)
         [[{to_key(String.upcase(key)), val, params} | col] | stack]
@@ -234,6 +234,7 @@ defmodule ICalendar.Decoder do
   defp parse_val("FALSE", :boolean, _params), do: false
 
   defp parse_val(val, :cal_address, params) do
+    # TODO
     val
   end
 
