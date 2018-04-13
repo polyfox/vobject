@@ -23,21 +23,86 @@ defmodule ICalendar.Encoder do
     ], ":")
   end
 
-  def encode_kparam(key, %{}), do: key
+  def encode_kparam(key, %{}), do: encode_key(key)
   def encode_kparam(key, params) do
-    key <> ";" <> encode_params(params)
+    encode_key(key) <> ";" <> encode_params(params)
   end
 
   def encode_params(params) when params == %{}, do: nil
   def encode_params(params) do
     params
-    # TODO escape val
+    # TODO escape parameter vals (^)
     |> Enum.map(fn {key, val} -> encode_key(key) <> "=" <> val end)
     |> Enum.join(";")
   end
 
-  def encode_val(val, type) do
-    inspect(val)
+  # -----------
+
+  def encode_val(vals, type) when is_list(vals) do
+    vals
+    |> Enum.map(&encode_val(&1, type))
+    |> Enum.join(",") # TODO configurable per field
   end
 
+  def encode_val(val, :binary) do
+    # TODO
+  end
+
+  def encode_val(true, :boolean), do: "TRUE"
+  def encode_val(false, :boolean), do: "FALSE"
+
+  def encode_val(val, :cal_address), do: val
+
+  def encode_val(val, :date) do
+    Timex.format!(val, "{YYYY}{0M}{0D}")
+  end
+
+  def encode_val(val, :date_time) do
+    # TODO
+  end
+
+  def encode_val(val, :duration) do
+    Timex.Format.Duration.Formatter.format(val)
+  end
+
+  def encode_val(val, :float) do
+    to_string(val)
+  end
+
+  def encode_val(val, :integer) do
+    to_string(val)
+  end
+
+  def encode_val(val, :period) do
+    # TODO
+  end
+
+  def encode_val(val, :recur) do
+    #TODO:
+  end
+
+  @escape ~r/\\|;|,|\n/
+  def encode_val(val, :text) do
+    Regex.replace(@escape, val, fn
+      "\\" -> "\\\\"
+      ";" ->  "\\;"
+      "," -> "\\,"
+      "\n" -> "\\n"
+      v -> v
+    end)
+  end
+
+  def encode_val(val, :time) do
+    # TODO timezones
+  end
+
+  def encode_val(val, :utc_offset) do
+    # TODO once encoding is decided
+    val
+  end
+
+  # TODO: replace nil with unknown
+  def encode_val(val, nil) do
+    val
+  end
 end

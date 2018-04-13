@@ -25,5 +25,15 @@ defmodule ICalendar.EncoderTest do
 
     res = Encoder.encode(res)
     IO.inspect res
+
+    stream = File.read!("test/fixtures/blank_description.ics")
+    {:ok, res} = ICalendar.Decoder.decode(stream)
+
+    res = Encoder.encode(res)
+    IO.inspect res
+  end
+
+  test "properly encode text" do
+    assert Encoder.encode_val("test;me,putting\\quotes\nnow", :text) == ~S(test\;me\,putting\\quotes\nnow)
   end
 end
