@@ -14,8 +14,13 @@ defmodule ICalendar.Encoder do
 
   @doc "Encode into iCal format."
   def encode(obj) do
-    encode_component(obj)
+    obj
+    |> encode_component
     |> IO.iodata_to_binary
+  end
+
+  def encode_to_iodata(obj) do
+    encode_component(obj)
   end
 
   @doc "Encode a component."
