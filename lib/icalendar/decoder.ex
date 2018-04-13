@@ -95,6 +95,7 @@ defmodule ICalendar.Decoder do
     "VALUE"
   ]
 
+  defp to_key(string) when is_atom(string), do: string
   defp to_key(string) do
     # TODO limit to_atom to @properties + @parameters
     string
@@ -148,13 +149,16 @@ defmodule ICalendar.Decoder do
 
   # matches a property
   defp parse([{key, val, params} | attrs], acc) do
-    {type, params} = determine_type(key, params)
-    val = {parse_vals(val, type, params), params, type}
+    val = parse_spec(val, @props[key], params)
+    # I wish we could skip this
+    type = to_key(params[:value] || get_in(@props, [key, :default]) || :unknown)
+    # drop value, we already used it while parsing
+    val = {val, Map.drop(params, [:value]), type}
 
     l = Map.get(acc, key)
     if l do
       # TODO: have a list of properties that can be multiple
-      parse(attrs, Map.put(acc, key, [val | List.wrap(l)]))
+      parse(attrs, Map.put(acc, key, List.flatten([val | List.wrap(l)])))
     else
       parse(attrs, Map.put(acc, key, val))
     end
@@ -162,18 +166,23 @@ defmodule ICalendar.Decoder do
 
   # --------
 
-  # VALUE can override the default type
-  defp determine_type(_key, %{value: type} = params) do
-    {to_key(type), Map.drop(params, [:value])}
+  # Use the typing data to parse a value
+  def parse_spec(val, %{multi: delim} = spec, params) do
+    val
+    |> String.split(delim)
+    |> Enum.map(fn val -> parse_spec(val, Map.drop(spec, [:multi]), params) end)
   end
-  defp determine_type(key, params), do: {get_in(@props, [key, :default]) || :unknown, params}
 
-  def parse_vals(val, type, params) do
-    # TODO: ; to tuple, , to array
-    case String.split(val, ~r/(?<!\\)[;,]/) do
-      [val] -> parse_val(val, type, params)
-      vals -> Enum.map(vals, fn val -> parse_val(val, type, params) end)
-    end
+  def parse_spec(val, %{structured: delim} = spec, params) do
+    val
+    |> String.split(delim)
+    |> Enum.map(fn val -> parse_spec(val, Map.drop(spec, [:structured]), params) end)
+    |> List.to_tuple()
+  end
+
+  def parse_spec(val, spec, params) do
+    type = to_key(params[:value] || (spec || %{})[:default] || :unknown)
+    parse_val(val, type, params)
   end
 
   def parse_val(val, :binary, %{encoding: "BASE64"}) do
