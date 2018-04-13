@@ -92,7 +92,7 @@ defmodule ICalendar.Encoder do
 
   def encode_val(val, :binary) do
     # TODO for non base64?
-    {Base.encode64!(val), %{encoding: "BASE64"}}
+    {Base.encode64(val), %{encoding: "BASE64"}}
   end
 
   def encode_val(true, :boolean), do: "TRUE"

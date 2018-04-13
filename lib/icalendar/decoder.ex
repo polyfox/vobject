@@ -2,7 +2,9 @@ defmodule ICalendar.Decoder do
   def decode(string) do
     val =
       string
+      # unfold
       |> String.replace(~r/\r?\n[ \t]/, "")
+      # split on newline or CRLF
       |> String.split(~r/\r?\n/)
       |> Enum.reduce([], &stree/2)
       |> parse
@@ -184,6 +186,8 @@ defmodule ICalendar.Decoder do
     type = to_key(params[:value] || (spec || %{})[:default] || :unknown)
     parse_val(val, type, params)
   end
+
+  # Per type parsing procedures
 
   def parse_val(val, :binary, %{encoding: "BASE64"}) do
     Base.decode64!(val)
