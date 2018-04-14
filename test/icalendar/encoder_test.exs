@@ -46,4 +46,19 @@ defmodule ICalendar.EncoderTest do
     {:ok, time} = Timex.parse("173015ZAmerica/Los_Angeles", "{h24}{m}{s}Z{Zname}")
     assert Encoder.encode_val(time, :time) == {"173015", %{tzid: "America/Los_Angeles"}}
   end
+
+  test "properly encode an inline multi value" do
+    expected = ["CATEGORIES", ":", ["cat3", ",", "cat2", ",", "cat1"], "\n"]
+    res = Encoder.encode_prop(:categories, {["cat1", "cat2", "cat3"], %{}, :text}, %{multi: ","})
+
+    assert res == expected
+
+    expected = [
+      ["CATEGORIES", ":", "cat1", "\n"],
+      ["CATEGORIES", ":", "cat2", "\n"],
+      ["CATEGORIES", ":", "cat3", "\n"]
+    ]
+    res = Encoder.encode_prop(:categories, {["cat1", "cat2", "cat3"], %{}, :text}, %{})
+    assert res == expected
+  end
 end

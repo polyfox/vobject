@@ -53,22 +53,41 @@ defmodule ICalendar.Encoder do
     encode_component({key, component})
   end
 
-  # TODO: match whether it's a multi , or ; key, or per attr
-  def encode_prop(key, {vals, params, type}) when is_list(vals) do
+  def encode_prop(key, data) when is_tuple(data) do
+    # shim: load the spec data
+    # TODO: make this neater
+    spec = __props__(key)
+    encode_prop(key, data, spec)
+  end
+
+  # HAXX: we skip the per line encode here, but this isn't too elegant
+  def encode_prop(key, {vals, params, type}, %{multi: delim}) when is_list(vals) do
+    {val, params} = Enum.reduce(vals, {[], params}, fn val, {vals, params} ->
+      case encode_val(val, type) do
+        {val, extra_params} ->
+          {[val | vals], Map.merge(params, extra_params)}
+        val ->
+          {[val | vals], params}
+      end
+    end)
+    [encode_kparam(key, params), ":", Enum.intersperse(val, delim), "\n"]
+  end
+
+  def encode_prop(key, {vals, params, type}, spec) when is_list(vals) do
     Enum.map(vals, &encode_prop(key, {&1, params, type}))
   end
 
-  # TODO: work with structured vals, tuple
-
-  def encode_prop(key, {val, params, type}) do
-    case encode_val(val, type) do
+  def encode_prop(key, {val, params, type}, spec) do
+    # take any extra params the field encoding might have given
+    {val, params} =  case encode_val(val, type) do
       {val, extra_params} ->
-        # take any extra params the field encoding might have given
-        [encode_kparam(key, Map.merge(params, extra_params)), ":", val, "\n"]
+        {val, Map.merge(params, extra_params)}
       val ->
-        [encode_kparam(key, params), ":", val, "\n"]
+        {val, params}
     end
+    [encode_kparam(key, params), ":", val, "\n"]
   end
+  # TODO: work with structured vals, tuple
 
   @doc "Encode a key together with parameters."
   def encode_kparam(key, params) when params == %{}, do: encode_key(key)
