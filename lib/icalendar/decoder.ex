@@ -165,13 +165,14 @@ defmodule ICalendar.Decoder do
   def parse_val(val, :period, _params) do
     [from, to] = String.split(val, "/", parts: 2, trim: true)
 
-    from = parse_val(from, :date_time, %{})
+    {:ok, from} = parse_val(from, :date_time, %{})
     # to can either be a duration or a date_time
     to = if String.starts_with?(to, "P") do
       {:ok, val} = Timex.Parse.Duration.Parsers.ISO8601Parser.parse(to)
       val |> Map.drop([:__struct__]) |> Map.to_list
     else
-      parse_val(to, :date_time, %{})
+      {:ok, to} = parse_val(to, :date_time, %{})
+      to
     end
 
     {:ok, Timex.Interval.new(from: from, until: to)}
