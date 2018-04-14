@@ -106,6 +106,12 @@ defmodule ICalendar.Encoder do
 
   # -----------
 
+  # TODO: move helper
+  defp zero_pad(val, count) when val >= 0 do
+    num = Integer.to_string(val)
+    :binary.copy("0", count - byte_size(num)) <> num
+  end
+
   @doc "Encode a value."
   def encode_val(vals, type) when is_tuple(vals) do
     vals
@@ -125,22 +131,29 @@ defmodule ICalendar.Encoder do
   def encode_val(val, :cal_address), do: val
 
   def encode_val(val, :date) do
-    Timex.format!(val, "{YYYY}{0M}{0D}")
+    zero_pad(val.year, 4) <> zero_pad(val.month, 2) <> zero_pad(val.day, 2)
   end
 
+  # TODO: just match on the next case for when not == Etc/UTC
   def encode_val(%{time_zone: "Etc/UTC"} = val, :date_time) do
-    Timex.format!(val, "{YYYY}{0M}{0D}T{h24}{m}{s}Z")
+    date = encode_val(val, :date)
+    time = encode_val(val, :time)
+    date <> "T" <> time
   end
 
-  def encode_val(%{time_zone: time_zone} = val, :date_time) do
+  def encode_val(%{time_zone: _time_zone} = val, :date_time) do
+    date = encode_val(val, :date)
+    {time, params} = encode_val(val, :time)
     {
-      Timex.format!(val, "{YYYY}{0M}{0D}T{h24}{m}{s}"),
-      %{tzid: time_zone}
+      date <> "T" <> time,
+      params
     }
   end
 
   def encode_val(val, :date_time) do
-    Timex.format!(val, "{YYYY}{0M}{0D}T{h24}{m}{s}")
+    date = encode_val(val, :date)
+    time = encode_val(val, :time)
+    date <> "T" <> time
   end
 
   def encode_val(val, :duration) do
@@ -157,7 +170,8 @@ defmodule ICalendar.Encoder do
   def encode_val(val, :integer), do: to_string(val)
 
   def encode_val(val, :period) do
-    # TODO
+    # TODO somehow store if period end is a duration or datetime
+    # so we can encode it again proper
     ""
   end
 
@@ -179,14 +193,18 @@ defmodule ICalendar.Encoder do
   end
 
   def encode_val(%{time_zone: "Etc/UTC"} = val, :time) do
-    Timex.format!(val, "{h24}{m}{s}Z")
+    zero_pad(val.hour, 2) <> zero_pad(val.minute, 2) <> zero_pad(val.second, 2) <> "Z"
+  end
+
+  def encode_val(%{time_zone: time_zone} = val, :time) do
+    {
+      zero_pad(val.hour, 2) <> zero_pad(val.minute, 2) <> zero_pad(val.second, 2),
+      %{tzid: time_zone}
+    }
   end
 
   def encode_val(val, :time) do
-    {
-      Timex.format!(val, "{h24}{m}{s}"),
-      %{tzid: val.time_zone}
-    }
+    zero_pad(val.hour, 2) <> zero_pad(val.minute, 2) <> zero_pad(val.second, 2)
   end
 
   def encode_val(val, :uri), do: val

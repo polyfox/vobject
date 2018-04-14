@@ -42,9 +42,16 @@ defmodule ICalendar.EncoderTest do
     assert Encoder.encode_val("test;me,putting\\quotes\nnow", :text) == ~S(test\;me\,putting\\quotes\nnow)
   end
 
+  test "properly encode period" do
+    # TODO
+  end
+
   test "properly encode time" do
     {:ok, time} = Timex.parse("173015ZAmerica/Los_Angeles", "{h24}{m}{s}Z{Zname}")
     assert Encoder.encode_val(time, :time) == {"173015", %{tzid: "America/Los_Angeles"}}
+
+    time = ~T[13:00:07]
+    assert Encoder.encode_val(time, :time) == "130007"
   end
 
   test "properly encode an inline multi value" do
