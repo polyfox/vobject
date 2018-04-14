@@ -201,15 +201,14 @@ defmodule ICalendar.Decoder do
  # TODO
  def parse_val(val, :cal_address, params), do: {:ok, val}
 
- def parse_val(val, :date, params), do: to_date(val, params)
+ def parse_val(val, :date, params), do: to_date(val)
 
  def parse_val(val, :date_time, params), do: to_datetime(val, params)
 
   # negative duration
   def parse_val("-" <> val, :duration, params) do
-    val
-    |> parse_val(:duration, params)
-    |> Timex.Duration.invert()
+    {:ok, val} = parse_val(val, :duration, params)
+    {:ok, Timex.Duration.invert(val)}
   end
 
   # strip plus
@@ -330,7 +329,15 @@ defmodule ICalendar.Decoder do
   end
 
   def to_datetime(date_string, %{}) do
-    to_datetime(date_string, %{tzid: "Etc/UTC"})
+    # it's utc
+    if String.ends_with?(date_string, "Z") do
+      {:ok, naive_datetime} = to_datetime(date_string)
+      DateTime.from_naive(naive_datetime, "Etc/UTC")
+    else # its a relative date, parse as naive datetime
+      date_string
+      |> String.trim_trailing("Z")
+      |> to_datetime()
+    end
   end
 
   def to_datetime(string) do
@@ -351,7 +358,6 @@ defmodule ICalendar.Decoder do
     end
   end
 
-
   def to_date(string) do
     with <<year::4-bytes, month::2-bytes, day::2-bytes>> <- string,
          {year, ""} <- Integer.parse(year),
@@ -362,6 +368,7 @@ defmodule ICalendar.Decoder do
       {:error, reason} -> {:error, reason}
       _ -> {:error, :invalid_format}
     end
+  end
 
   def to_time(time_string, %{tzid: timezone}) do
     time_string =
