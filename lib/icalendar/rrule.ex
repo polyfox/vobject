@@ -193,7 +193,7 @@ defmodule ICalendar.RRULE do
     key =
       case Map.fetch(@string_to_atom_keys, key) do
         {:ok, atom} -> atom
-        {:error} ->
+        {:error, _reason} ->
             key
             |> String.downcase
             |> String.to_atom
@@ -218,16 +218,8 @@ defmodule ICalendar.RRULE do
   """
   def parse_value_as_list(value), do: parse_value_as_list(value, &(&1))
   def parse_value_as_list(value, operation) when is_function(operation) do
-    vals =
-      value
-      |> String.split(",")
-
-    vals
-    |> is_bitstring
-    |> case do
-        true -> [vals]
-        false -> vals
-      end
+    value
+    |> String.split(",")
     |> Enum.map(operation)
   end
 
