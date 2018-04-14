@@ -57,6 +57,8 @@ defmodule ICalendar.Encoder do
     Enum.map(vals, &encode_prop(key, {&1, params, type}))
   end
 
+  # TODO: work with structured vals, tuple
+
   def encode_prop(key, {val, params, type}) do
     case encode_val(val, type) do
       {val, extra_params} ->
@@ -109,11 +111,15 @@ defmodule ICalendar.Encoder do
     Timex.format!(val, "{YYYY}{0M}{0D}T{h24}{m}{s}Z")
   end
 
-  def encode_val(val, :date_time) do
+  def encode_val(%{time_zone: time_zone} = val, :date_time) do
     {
       Timex.format!(val, "{YYYY}{0M}{0D}T{h24}{m}{s}"),
-      %{tzid: val.time_zone}
+      %{tzid: time_zone}
     }
+  end
+
+  def encode_val(val, :date_time) do
+    Timex.format!(val, "{YYYY}{0M}{0D}T{h24}{m}{s}")
   end
 
   def encode_val(val, :duration) do

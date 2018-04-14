@@ -238,7 +238,7 @@ defmodule ICalendar.RRULE do
     end
   end
   def validate_param(prop = %Property{key: "UNTIL", value: value}) do
-    out = Decoder.to_date(value, %{"TZID" => "Etc/UTC"})
+    out = Decoder.to_datetime(value, %{"TZID" => "Etc/UTC"})
     case out do
       {:ok, date} -> %{prop | value: date}
       _           -> {:error, prop, "'#{value}' is not a valid date"}
