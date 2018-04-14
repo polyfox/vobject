@@ -1,5 +1,6 @@
 defmodule ICalendar.Encoder do
   alias ICalendar.RFC6868
+  import ICalendar, only: [__props__: 1]
 
   @types %{
     event: "VEVENT",

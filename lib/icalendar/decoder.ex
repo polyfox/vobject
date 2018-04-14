@@ -27,29 +27,6 @@ defmodule ICalendar.Decoder do
     "DAYLIGHT" => :daylight
   }
 
-  @parameters [
-    "ALTREP",
-    "CN",
-    "CUTYPE",
-    "DELEGATED-FROM",
-    "DELEGATED-TO",
-    "DIR",
-    "ENCODING",
-    "FMTTYPE",
-    "FBTYPE",
-    "LANGUAGE",
-    "MEMBER",
-    "PARTSTAT",
-    "RANGE",
-    "RELATED",
-    "RELTYPE",
-    "ROLE",
-    "RSVP",
-    "SENT-BY",
-    "TZID",
-    "VALUE"
-  ]
-
   defp to_key(string) when is_atom(string), do: string
   defp to_key(string) do
     # TODO limit to_atom to @properties + @parameters

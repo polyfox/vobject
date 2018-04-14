@@ -86,6 +86,52 @@ defmodule ICalendar do
     version:          %{default: :text},
   }
 
+  @params %{
+    altrep: %{},
+    cn: %{},
+    cutype: %{values: ["INDIVIDUAL", "GROUP", "RESOURCE", "ROOM", "UNKNOWN"], allow_x_name: true, allow_iana: true},
+    delegated_from: %{multi: ",", value: :cal_address},
+    delegated_to: %{multi: ",", value: :cal_address},
+    dir: %{},
+    encoding: %{values: ["8BIT", "BASE64"]},
+    fmttype: %{},
+    fbtype: %{
+      values: ["FREE", "BUSY", "BUSY-UNAVAILABLE", "BUSY-TENTATIVE"],
+      allow_x_name: true,
+      allow_iana: true
+    },
+    language: %{},
+    member: %{multi: ",", value: :cal_address},
+    # TODO These values are actually different per-component
+    partstat: %{values: ["NEEDS-ACTION", "ACCEPTED", "DECLINED", "TENTATIVE",
+                         "DELEGATED", "COMPLETED", "IN-PROCESS"],
+      allow_x_name: true,
+      allow_iana: true
+    },
+    range: %{values: ["THISANDFUTURE"]},
+    related: %{values: ["START", "END"]},
+    reltype: %{
+      values: ["PARENT", "CHILD", "SIBLING"],
+      allow_x_name: true,
+      allow_iana_token: true
+    },
+    role: %{
+      values: ["REQ-PARTICIPANT", "CHAIR", "OPT-PARTICIPANT", "NON-PARTICIPANT"],
+      allow_x_name: true,
+      allow_iana_token: true
+    },
+    rsvp: %{value: :boolean},
+    sent_by: %{value: :cal_address},
+    tzid: %{matches: ~r/^\//},
+    value: %{
+      values: [:binary, :boolean, :cal_address, :date, :date_time,
+               :duration, :float, :integer, :period, :recur, :text,
+               :time, :uri, :utc_offset],
+      allow_x_name: true,
+      allow_iana_token: true
+    }
+  }
+
   @type spec :: %{optional(atom) => any}
 
   @spec __props__(atom) :: spec
@@ -94,18 +140,13 @@ defmodule ICalendar do
       unquote(Macro.escape(spec))
     end
   end
-
   def __props__(_), do: %{default: :unknown}
-end
 
-defimpl ICalendar.Serialize, for: ICalendar do
-  def to_ics(calendar) do
-  events = Enum.map( calendar.events, &ICalendar.Serialize.to_ics/1 )
-  """
-  BEGIN:VCALENDAR
-  CALSCALE:GREGORIAN
-  VERSION:2.0
-  #{events}END:VCALENDAR
-  """
+  @spec __params__(atom) :: spec
+  for {name, spec} <- @params do
+    def __params__(unquote(name)) do
+      unquote(Macro.escape(spec))
+    end
   end
+  def __params__(_), do: %{default: :unknown}
 end
