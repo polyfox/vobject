@@ -128,12 +128,12 @@ defmodule ICalendar.Decoder do
   def parse_val("FALSE", :boolean, _params), do: {:ok, false}
   def parse_val(_, :boolean, _params), do: {:error, :invalid_boolean}
 
- # TODO
- def parse_val(val, :cal_address, _params), do: {:ok, val}
+  # TODO
+  def parse_val(val, :cal_address, _params), do: {:ok, val}
 
- def parse_val(val, :date, _params), do: to_date(val)
+  def parse_val(val, :date, _params), do: to_date(val)
 
- def parse_val(val, :date_time, params), do: to_datetime(val, params)
+  def parse_val(val, :date_time, params), do: to_datetime(val, params)
 
   # negative duration
   def parse_val("-" <> val, :duration, params) do
