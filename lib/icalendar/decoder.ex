@@ -1,4 +1,6 @@
 defmodule ICalendar.Decoder do
+  alias ICalendar.RFC6868
+
   def decode(string) do
     val =
       string
@@ -199,9 +201,9 @@ defmodule ICalendar.Decoder do
   def parse_val(_, :boolean, _params), do: {:error, :invalid_boolean}
 
  # TODO
- def parse_val(val, :cal_address, params), do: {:ok, val}
+ def parse_val(val, :cal_address, _params), do: {:ok, val}
 
- def parse_val(val, :date, params), do: to_date(val)
+ def parse_val(val, :date, _params), do: to_date(val)
 
  def parse_val(val, :date_time, params), do: to_datetime(val, params)
 
@@ -263,7 +265,6 @@ defmodule ICalendar.Decoder do
   # this could be x-vals
   def parse_val(val, :unknown, _), do: {:ok, val}
 
-
   @doc ~S"""
   This function extracts parameter data from a key in an iCalendar string.
 
@@ -286,7 +287,11 @@ defmodule ICalendar.Decoder do
       |> Enum.reduce(%{}, fn(param, acc) ->
         [key, val] = String.split(param, "=", parts: 2, trim: true)
         # trim only leading and trailing double quote
-        Map.merge(acc, %{to_key(key) => String.trim(val, ~s("))})
+        Map.merge(acc, %{to_key(key) =>
+          val
+          |> String.trim(~s("))
+          |> RFC6868.unescape()
+        })
       end)
 
       [key, params]
@@ -381,11 +386,11 @@ defmodule ICalendar.Decoder do
   end
 
   def to_time(time_string, %{}) do
-    to_time(time_string, %{"TZID" => "Etc/UTC"})
+    to_time(time_string, %{tzid: "Etc/UTC"})
   end
 
   def to_time(time_string) do
-    to_time(time_string, %{"TZID" => "Etc/UTC"})
+    to_time(time_string, %{tzid: "Etc/UTC"})
   end
 
   @doc ~S"""

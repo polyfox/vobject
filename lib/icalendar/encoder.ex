@@ -1,4 +1,5 @@
 defmodule ICalendar.Encoder do
+  alias ICalendar.RFC6868
 
   @types %{
     event: "VEVENT",
@@ -77,7 +78,7 @@ defmodule ICalendar.Encoder do
   def encode_params(params) do
     params
     # TODO escape parameter vals (^)
-    |> Enum.map(fn {key, val} -> encode_key(key) <> "=" <> val end)
+    |> Enum.map(fn {key, val} -> encode_key(key) <> "=" <> RFC6868.escape(val) end)
     |> Enum.join(";")
   end
 
