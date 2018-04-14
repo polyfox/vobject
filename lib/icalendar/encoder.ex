@@ -107,10 +107,11 @@ defmodule ICalendar.Encoder do
   # -----------
 
   @doc "Encode a value."
-  def encode_val(vals, type) when is_list(vals) do
+  def encode_val(vals, type) when is_tuple(vals) do
     vals
+    |> Tuple.to_list()
     |> Enum.map(&encode_val(&1, type))
-    |> Enum.join(",") # TODO configurable per field
+    |> Enum.join(";") # TODO configurable per field
   end
 
   def encode_val(val, :binary) do
