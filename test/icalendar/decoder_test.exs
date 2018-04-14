@@ -113,7 +113,7 @@ defmodule ICalendar.ParserTest do
 
   test "failing negative duration" do
     attr = "-PT10M"
-    res = Decoder.parse_val(attr, :duration, %{})
+    res = Decoder.parse_type(attr, :duration, %{})
   end
 
   test "failing duration 1PDT" do

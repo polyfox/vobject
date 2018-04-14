@@ -81,7 +81,7 @@ defmodule ICalendar.Decoder do
 
   # matches a property
   defp parse([{key, val, params} | attrs], acc) do
-    val = parse_spec(val, __props__(key), params)
+    val = parse_val(val, __props__(key), params)
     # I wish we could skip this
     type = to_key(params[:value] || __props__(key)[:default])
     # drop value, we already used it while parsing
@@ -99,100 +99,100 @@ defmodule ICalendar.Decoder do
   # --------
 
   # Use the typing data to parse a value
-  def parse_spec(val, %{multi: delim} = spec, params) do
+  def parse_val(val, %{multi: delim} = spec, params) do
     val
     |> String.split(delim)
-    |> Enum.map(fn val -> parse_spec(val, Map.drop(spec, [:multi]), params) end)
+    |> Enum.map(fn val -> parse_val(val, Map.drop(spec, [:multi]), params) end)
   end
 
-  def parse_spec(val, %{structured: delim} = spec, params) do
+  def parse_val(val, %{structured: delim} = spec, params) do
     val
     |> String.split(delim)
-    |> Enum.map(fn val -> parse_spec(val, Map.drop(spec, [:structured]), params) end)
+    |> Enum.map(fn val -> parse_val(val, Map.drop(spec, [:structured]), params) end)
     |> List.to_tuple()
   end
 
-  def parse_spec(val, spec, params) do
+  def parse_val(val, spec, params) do
     type = to_key(params[:value] || (spec || %{})[:default] || :unknown)
-    {:ok, val} = parse_val(val, type, params)
+    {:ok, val} = parse_type(val, type, params)
     val
   end
 
   # Per type parsing procedures
 
-  def parse_val(val, :binary, %{encoding: "BASE64"}) do
+  def parse_type(val, :binary, %{encoding: "BASE64"}) do
     Base.decode64(val)
   end
 
-  def parse_val("TRUE", :boolean, _params), do: {:ok, true}
-  def parse_val("FALSE", :boolean, _params), do: {:ok, false}
-  def parse_val(_, :boolean, _params), do: {:error, :invalid_boolean}
+  def parse_type("TRUE", :boolean, _params), do: {:ok, true}
+  def parse_type("FALSE", :boolean, _params), do: {:ok, false}
+  def parse_type(_, :boolean, _params), do: {:error, :invalid_boolean}
 
   # TODO
-  def parse_val(val, :cal_address, _params), do: {:ok, val}
+  def parse_type(val, :cal_address, _params), do: {:ok, val}
 
-  def parse_val(val, :date, _params), do: to_date(val)
+  def parse_type(val, :date, _params), do: to_date(val)
 
-  def parse_val(val, :date_time, params), do: to_datetime(val, params)
+  def parse_type(val, :date_time, params), do: to_datetime(val, params)
 
   # negative duration
-  def parse_val("-" <> val, :duration, params) do
-    {:ok, val} = parse_val(val, :duration, params)
+  def parse_type("-" <> val, :duration, params) do
+    {:ok, val} = parse_type(val, :duration, params)
     {:ok, Timex.Duration.invert(val)}
   end
 
   # strip plus
-  def parse_val("+" <> val, :duration, params) do
-    parse_val(val, :duration, params)
+  def parse_type("+" <> val, :duration, params) do
+    parse_type(val, :duration, params)
   end
 
-  def parse_val(val, :duration, _params) do
+  def parse_type(val, :duration, _params) do
     val
     |> String.trim_trailing("T") # for some reason 1PDT is valid
     |> Timex.Parse.Duration.Parsers.ISO8601Parser.parse
   end
 
-  def parse_val(val, :float, _params) do
+  def parse_type(val, :float, _params) do
     {f, ""} = Float.parse(val)
     {:ok, f}
   end
 
-  def parse_val(val, :integer, _params) do
+  def parse_type(val, :integer, _params) do
     {f, ""} = Integer.parse(val)
     {:ok, f}
   end
 
-  def parse_val(val, :period, _params) do
+  def parse_type(val, :period, _params) do
     [from, to] = String.split(val, "/", parts: 2, trim: true)
 
-    {:ok, from} = parse_val(from, :date_time, %{})
+    {:ok, from} = parse_type(from, :date_time, %{})
     # to can either be a duration or a date_time
     to = if String.starts_with?(to, "P") do
       {:ok, val} = Timex.Parse.Duration.Parsers.ISO8601Parser.parse(to)
       val |> Map.drop([:__struct__]) |> Map.to_list
     else
-      {:ok, to} = parse_val(to, :date_time, %{})
+      {:ok, to} = parse_type(to, :date_time, %{})
       to
     end
 
     {:ok, Timex.Interval.new(from: from, until: to)}
   end
 
-  def parse_val(val, :recur, _params) do
+  def parse_type(val, :recur, _params) do
     ICalendar.RRULE.deserialize(val)
   end
 
-  def parse_val(val, :text, _params), do: {:ok, unescape(val)}
+  def parse_type(val, :text, _params), do: {:ok, unescape(val)}
 
-  def parse_val(val, :time, params), do: to_time(val, params)
+  def parse_type(val, :time, params), do: to_time(val, params)
 
-  def parse_val(val, :uri, _params), do: {:ok, val}
+  def parse_type(val, :uri, _params), do: {:ok, val}
 
   # TODO (not sure what the best way to store this is)
-  def parse_val(val, :utc_offset, _params), do: {:ok, val}
+  def parse_type(val, :utc_offset, _params), do: {:ok, val}
 
   # this could be x-vals
-  def parse_val(val, :unknown, _), do: {:ok, val}
+  def parse_type(val, :unknown, _), do: {:ok, val}
 
   @doc ~S"""
   This function extracts parameter data from a key in an iCalendar string.
