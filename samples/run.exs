@@ -15,6 +15,32 @@
 {:ok, decoded} = ICalendar.Decoder.decode(stream)
 IO.inspect decoded
 
+%{
+  __type__: :event,
+  description: {"some HTML in here", %{}, :text},
+  dtend: {#DateTime<2017-04-19 10:25:00Z>, %{}, :date_time},
+  dtstart: {#DateTime<2017-04-19 09:15:00Z>, %{}, :date_time},
+  location: {"here", %{}, :text},
+  rdate: {[
+     %Timex.Interval{
+       from: ~N[1996-04-03 02:00:00],
+       left_open: false,
+       right_open: true,
+       step: [days: 1],
+       until: ~N[1996-04-03 04:00:00]
+     },
+     %Timex.Interval{
+       from: ~N[1996-04-04 01:00:00],
+       left_open: false,
+       right_open: true,
+       step: [days: 1],
+       until: ~N[1996-04-04 04:00:00]
+     }
+   ], %{}, :period},
+  status: {"CONFIRMED", %{}, :text},
+  summary: {"test reminder2", %{}, :text},
+  uid: {"00U5E000001JfN7UAK", %{}, :text}
+}
 #:eflame.apply(ICalendar.Decoder, :decode, [stream])
 #ICalendar.Encoder.encode(decoded)
 #
