@@ -86,6 +86,8 @@ defmodule ICalendar do
     version:          %{default: :text},
   }
 
+  # cal_address and uri should be quoted
+  # altrep delegated_from, delegated_to, dir, member, sent-by
   @params %{
     altrep: %{},
     cn: %{},

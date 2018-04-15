@@ -1,7 +1,7 @@
 defmodule VObject.Mixfile do
   use Mix.Project
 
-  @version "0.1.0"
+  @version "0.5.0"
 
   def project do
     [
@@ -24,7 +24,7 @@ defmodule VObject.Mixfile do
   end
 
   def application do
-    [extra_applications: [:runtime_tools]]
+    [extra_applications: []]
   end
 
   defp deps do
@@ -39,12 +39,11 @@ defmodule VObject.Mixfile do
       # Documentation generator
       {:ex_doc, "~> 0.18", only: [:dev, :test]},
 
+      # Benchmarks
       {:benchee, "~> 0.11", only: :dev},
       {:benchee_html, "~> 0.4", only: :dev},
 
-      {:dbg, github: "fishcakez/dbg", only: :dev},
-
-      # For full timezone support
+      # Timezones, period parsing, intervals
       {:timex, "~> 3.0"}
     ]
   end

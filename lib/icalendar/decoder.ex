@@ -29,11 +29,11 @@ defmodule ICalendar.Decoder do
 
   defp to_key(string) when is_atom(string), do: string
   defp to_key(string) do
-    # TODO limit to_atom to @properties + @parameters
     string
     |> String.replace("-", "_")
     |> String.downcase
     |> String.to_atom
+    # TODO limit to_atom to @properties + @parameters
   end
 
   # tokenize data into a syntax tree
@@ -48,7 +48,7 @@ defmodule ICalendar.Decoder do
     # TODO: make sure end matches begin type
     [[Enum.reverse(item) | col] | stack]
   end
-  # this is annoying
+  # outer most element
   defp stree("END:" <> type, [col]) do
     # TODO: make sure end matches begin type
     Enum.reverse(col)
