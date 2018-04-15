@@ -118,10 +118,15 @@ defmodule ICalendar.ParserTest do
 
 
   test "decode tricky line with dquote" do
-    str = ~s(BEGIN:VEVENT\nDESCRIPTION;ALTREP="cid:part1.0001@example.org":The Fall'98 Wild Wizards Conference - - Las Vegas\, NV\, USA\nEND:VEVENT)
+    str = ~s(BEGIN:VEVENT\nDESCRIPTION;ALTREP="cid:part1.0001@example.org":The Fall'98 Wild Wizards Conference - Las Vegas\, NV\, USA\nEND:VEVENT)
     res = Decoder.decode(str)
 
-    IO.inspect res
+    assert res == {:ok,
+      {:event,
+        %{
+          description: {"The Fall'98 Wild Wizards Conference - Las Vegas, NV, USA",
+            %{altrep: "cid:part1.0001@example.org"}, :text}
+        }}}
   end
 
   test "failing duration 1PDT" do

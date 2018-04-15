@@ -55,12 +55,39 @@ defmodule ICalendar.Decoder do
   end
 
   defp stree(line, [col | stack]) do
-    case String.split(line, ":", parts: 2) do
-      [key, val] ->
-        [key, params] = retrieve_params(key)
-        [[{to_key(String.upcase(key)), val, params} | col] | stack]
-    end
+    {:ok, pos} = find_valpos(line)
+    val = binary_part(line, pos + 1, byte_size(line) - (pos + 1))
+    key = binary_part(line, 0, pos)
+
+    [key, params] = retrieve_params(key)
+    [[{to_key(String.upcase(key)), val, params} | col] | stack]
   end
+
+  # KEY;param=a;param="b : c =";param3=d:value : for us
+
+  # because of how params work, the value delimiter ":" could be included inside
+  # a double quoted parameter.
+  defp find_valpos(line), do: find_valpos(line, %{pos: 0, inside_quote: false})
+
+  # start of a quote
+  defp find_valpos(<<?", rest::binary>>, %{inside_quote: false} = state) do
+    find_valpos(rest, %{state | pos: state.pos + 1, inside_quote: true})
+  end
+  # end of a quote
+  defp find_valpos(<<?", rest::binary>>, %{inside_quote: true} = state) do
+    find_valpos(rest, %{state | pos: state.pos + 1, inside_quote: false})
+  end
+  # if we find the terminator, and not inside quotes, take it
+  defp find_valpos(<<?:, _rest::binary>>, %{inside_quote: inside} = state) when inside == false do
+    {:ok, state.pos}
+  end
+  defp find_valpos(<<_::1-bytes, rest::binary>>, state) do
+    find_valpos(rest, %{state | pos: state.pos + 1})
+  end
+  # error, didn't find separator
+  defp find_valpos(<<>>, _state), do: {:error, :invalid_prop}
+
+  # -------------------------
 
   # Transform the stree structure into concrete types
   defp parse(key, acc \\ %{})
@@ -244,7 +271,7 @@ defmodule ICalendar.Decoder do
   And should return error for incorrect dates:
 
       iex> ICalendar.Decoder.to_datetime("1993/04/07")
-      {:error, "Expected `2 digit month` at line 1, column 5."}
+      {:error, :invalid_format}
 
   It should handle timezones from  the Olson Database:
 
