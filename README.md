@@ -83,3 +83,11 @@ decode        1.67 K - 5.03x slower
 - RFC 6350 - vCard (4.0) (todo: vCard 3)
   - RFC 6351 - xCard
   - RFC 7095 - jCard
+
+# Special Thanks
+
+[@lpil](https://github.com/lpil) for the original [icalendar library](https://github.com/lpil/icalendar) which I used as a starting point for the rewrite.
+
+[@johnhamelink](https://github.com/johnhamelink) & [@walter](https://github.com/walter) for the RRule module implementation.
+
+Mozilla's [iCal.js](https://github.com/mozilla-comm/ical.js/) which served as an inspiration for parts of the parser.
