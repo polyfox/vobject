@@ -32,7 +32,9 @@ defmodule ICalendar.EncoderTest do
 
 
     IO.inspect res
-    res = Encoder.encode(res)
+    res = Encoder.encode_to_iodata(res)
+    #res = Encoder.encode(res)
+    IO.inspect res
     IO.puts res
   end
 

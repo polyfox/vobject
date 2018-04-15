@@ -124,13 +124,9 @@ defmodule ICalendar.Encoder do
     end
   end
 
-  def encode_val(val, :float) do
-    to_string(val)
-  end
+  def encode_val(val, :float), do: to_string(val)
 
-  def encode_val(val, :integer) do
-    to_string(val)
-  end
+  def encode_val(val, :integer), do: to_string(val)
 
   def encode_val(val, :period) do
     # TODO
@@ -144,6 +140,7 @@ defmodule ICalendar.Encoder do
 
   @escape ~r/\\|;|,|\n/
   def encode_val(val, :text) do
+    # TODO: optimize: only run the regex if string contains those chars
     Regex.replace(@escape, val, fn
       "\\" -> "\\\\"
       ";" ->  "\\;"
@@ -166,10 +163,8 @@ defmodule ICalendar.Encoder do
 
   def encode_val(val, :uri), do: val
 
-  def encode_val(val, :utc_offset) do
-    # TODO once encoding is decided
-    val
-  end
+  # TODO once encoding is decided
+  def encode_val(val, :utc_offset), do: val
 
   def encode_val(val, :unknown), do: val
 end

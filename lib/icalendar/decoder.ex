@@ -380,6 +380,14 @@ defmodule ICalendar.Decoder do
       end
 
     Timex.parse(date_string <> timezone, "{YYYY}{0M}{0D}T{h24}{m}{s}Z{Zname}")
+    # This is slow
+    #
+    # Timex.Parse.DateTime.Parser.parse/3                                  7      51.783       0.036
+    # Timex.Parse.DateTime.Parser.parse!/3                               7      51.783       0.036  <--
+    # Timex.Parse.DateTime.Tokenizers.Default.tokenize/1               7      29.750       0.063
+    # Timex.Parse.DateTime.Parser.do_parse/3                           7      21.997       0.148
+    #
+    # since it's a rigid format, use binary matching
   end
 
   def to_date(date_string, %{}) do
