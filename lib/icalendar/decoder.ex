@@ -140,7 +140,7 @@ defmodule ICalendar.Decoder do
   end
 
   def parse_val(val, spec, params) do
-    type = to_key(params[:value] || (spec || %{})[:default] || :unknown)
+    type = to_key(params[:value] || spec[:default])
     {:ok, val} = parse_type(val, type, params)
     val
   end
@@ -241,7 +241,7 @@ defmodule ICalendar.Decoder do
     params =
       params
       |> Enum.reduce(%{}, fn(param, acc) ->
-        [key, val] = String.split(param, "=", parts: 2, trim: true)
+        [key, val] = String.split(param, "=", parts: 2)
         # trim only leading and trailing double quote
         Map.merge(acc, %{to_key(key) =>
           val
