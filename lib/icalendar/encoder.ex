@@ -26,13 +26,13 @@ defmodule ICalendar.Encoder do
   end
 
   @doc "Encode a component."
-  @spec encode_component({type ::atom, props :: map}) :: iodata
-  def encode_component({type, props}) do
-    key = @types[type]
+  @spec encode_component(component :: map) :: iodata
+  def encode_component(%{__type__: key} = component) do
     [
       "BEGIN:#{key}",
       "\n",
-      Enum.map(props, fn
+      # TODO: map drop is slow, use some form of a skip, probably reduce
+      Enum.map(Map.drop(component, [:__type__]), fn
         {key, vals} when is_list(vals) -> Enum.map(vals, fn val -> encode_prop(key, val) end)
         {key, val} -> encode_prop(key, val)
       end),
@@ -49,8 +49,8 @@ defmodule ICalendar.Encoder do
   end
 
   @doc "Encode a property."
-  def encode_prop(key, %{} = component) do
-    encode_component({key, component})
+  def encode_prop(_key, %{} = component) do
+    encode_component(component)
   end
 
   def encode_prop(key, data) when is_tuple(data) do

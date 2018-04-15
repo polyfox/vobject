@@ -44,7 +44,9 @@ defmodule VObject.Mixfile do
       {:benchee_html, "~> 0.4", only: :dev},
 
       # Timezones, period parsing, intervals
-      {:timex, "~> 3.0"}
+      {:timex, "~> 3.0"},
+
+      {:eflame, "~> 1.0.1", only: :dev},
     ]
   end
 end

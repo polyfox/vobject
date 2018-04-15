@@ -122,11 +122,11 @@ defmodule ICalendar.ParserTest do
     res = Decoder.decode(str)
 
     assert res == {:ok,
-      {:event,
-        %{
-          description: {"The Fall'98 Wild Wizards Conference - Las Vegas, NV, USA",
-            %{altrep: "cid:part1.0001@example.org"}, :text}
-        }}}
+      %{
+        __type__: :event,
+        description: {"The Fall'98 Wild Wizards Conference - Las Vegas, NV, USA",
+          %{altrep: "cid:part1.0001@example.org"}, :text}
+      }}
   end
 
   test "failing duration 1PDT" do

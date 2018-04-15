@@ -9,8 +9,7 @@ defmodule ICalendar.Decoder do
       |> String.replace(~r/\r?\n[ \t]/, "")
       # split on newline or CRLF
       |> String.split(~r/\r?\n/)
-      |> Enum.reduce([], &stree/2)
-      |> parse
+      |> Enum.reduce([], &parse/2)
 
     {:ok, val}
   end
@@ -37,33 +36,51 @@ defmodule ICalendar.Decoder do
   end
 
   # tokenize data into a syntax tree
-  defp stree("", stack), do: stack
+  defp parse("", stack), do: stack
 
-  # pop a new collection onto the stack
-  defp stree("BEGIN:" <> type, stack) do
-    [[@types[type]] | stack]
+  # pop a new component onto the stack
+  defp parse("BEGIN:" <> type, stack) do
+    [%{__type__: @types[type]} | stack]
   end
 
-  defp stree("END:" <> type, [item, col | stack]) do
-    # TODO: make sure end matches begin type
-    [[Enum.reverse(item) | col] | stack]
+  # TODO: make sure end matches begin type
+  defp parse("END:" <> type, [obj, acc | stack]) do
+    acc = list_put(acc, @types[type], obj)
+    [acc | stack]
   end
-  # outer most element
-  defp stree("END:" <> type, [col]) do
-    # TODO: make sure end matches begin type
-    Enum.reverse(col)
+  # outermost component
+  defp parse("END:" <> type, [obj]), do: obj
+
+  defp parse(line, [obj | stack]) do
+    {key, prop} = parse_line(line)
+
+    obj = list_put(obj, key, prop)
+    [obj | stack]
   end
 
-  defp stree(line, [col | stack]) do
+  defp list_put(map, key, item) do
+    list = Map.get(map, key)
+    # if the key exists, make it an array
+    item = (if list, do: [item | List.wrap(list)], else: item)
+    Map.put(map, key, item)
+  end
+
+  def parse_line(line) do
     {:ok, pos} = find_valpos(line)
     val = binary_part(line, pos + 1, byte_size(line) - (pos + 1))
     key = binary_part(line, 0, pos)
 
     [key, params] = retrieve_params(key)
-    [[{to_key(String.upcase(key)), val, params} | col] | stack]
-  end
+    key = to_key(key)
+    # parse the value, potentially using VALUE or any other param in the process
+    spec = __props__(key)
+    val = parse_val(val, spec, params)
+    # HAXX: I wish we could skip this
+    type = to_key(params[:value] || spec[:default])
 
-  # KEY;param=a;param="b : c =";param3=d:value : for us
+    # drop value, we already used it while parsing
+    {key, {val, Map.drop(params, [:value]), type}}
+  end
 
   # because of how params work, the value delimiter ":" could be included inside
   # a double quoted parameter.
@@ -77,7 +94,7 @@ defmodule ICalendar.Decoder do
   defp find_valpos(<<?", rest::binary>>, %{inside_quote: true} = state) do
     find_valpos(rest, %{state | pos: state.pos + 1, inside_quote: false})
   end
-  # if we find the terminator, and not inside quotes, take it
+  # if we find the separator, and not inside quotes, take it
   defp find_valpos(<<?:, _rest::binary>>, %{inside_quote: inside} = state) when inside == false do
     {:ok, state.pos}
   end
@@ -88,42 +105,6 @@ defmodule ICalendar.Decoder do
   defp find_valpos(<<>>, _state), do: {:error, :invalid_prop}
 
   # -------------------------
-
-  # Transform the stree structure into concrete types
-  defp parse(key, acc \\ %{})
-
-  # end of parsing!
-  defp parse([], acc), do: acc
-
-  # matches the outer-most value
-  defp parse([key | attrs], _acc) when is_atom(key) do
-    {key, parse(attrs)}
-  end
-
-  # matches a collection
-  defp parse([obj | rest], acc) when is_list(obj) do
-    {key, attrs} = parse(obj)
-    parse(rest, Map.put(acc, key, attrs))
-  end
-
-  # matches a property
-  defp parse([{key, val, params} | attrs], acc) do
-    val = parse_val(val, __props__(key), params)
-    # I wish we could skip this
-    type = to_key(params[:value] || __props__(key)[:default])
-    # drop value, we already used it while parsing
-    val = {val, Map.drop(params, [:value]), type}
-
-    l = Map.get(acc, key)
-    if l do
-      # TODO: have a list of properties that can be multiple
-      parse(attrs, Map.put(acc, key, List.flatten([val | List.wrap(l)])))
-    else
-      parse(attrs, Map.put(acc, key, val))
-    end
-  end
-
-  # --------
 
   # Use the typing data to parse a value
   def parse_val(val, %{multi: delim} = spec, params) do
@@ -140,7 +121,7 @@ defmodule ICalendar.Decoder do
   end
 
   def parse_val(val, spec, params) do
-    type = to_key(params[:value] || spec[:default])
+    type = to_key(params[:value]) || spec[:default]
     {:ok, val} = parse_type(val, type, params)
     val
   end
