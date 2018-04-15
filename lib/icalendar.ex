@@ -3,10 +3,8 @@ defmodule ICalendar do
   Generating ICalendars
   """
 
-  defstruct events: []
-  defdelegate to_ics(events), to: ICalendar.Serialize
   defdelegate decode(string), to: ICalendar.Decoder
-  defdelegate encode(string), to: ICalendar.Encoder
+  defdelegate encode(object), to: ICalendar.Encoder
 
   @doc """
   To create a Phoenix/Plug controller and view that output ics format:
@@ -29,12 +27,7 @@ defmodule ICalendar do
   end
   ```
   """
-  def encode_to_iodata(calendar, options \\ []) do
-    {:ok, encode_to_iodata!(calendar, options)}
-  end
-  def encode_to_iodata!(calendar, _options \\ []) do
-    to_ics(calendar)
-  end
+  defdelegate encode_to_iodata(object, options \\ []), to: ICalendar.Encoder
 
   @props %{
     action:           %{default: :text},

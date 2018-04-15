@@ -21,7 +21,7 @@ defmodule ICalendar.Encoder do
     |> IO.iodata_to_binary
   end
 
-  def encode_to_iodata(obj) do
+  def encode_to_iodata(obj, opts \\ []) do
     encode_component(obj)
   end
 
