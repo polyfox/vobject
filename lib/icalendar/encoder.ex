@@ -22,13 +22,14 @@ defmodule ICalendar.Encoder do
     |> IO.iodata_to_binary
   end
 
-  def encode_to_iodata(obj, opts \\ []) do
+  def encode_to_iodata(obj, _opts \\ []) do
     encode_component(obj)
   end
 
   @doc "Encode a component."
   @spec encode_component(component :: map) :: iodata
   def encode_component(%{__type__: key} = component) do
+    key = @types[key]
     [
       "BEGIN:#{key}",
       "\n",
@@ -74,11 +75,11 @@ defmodule ICalendar.Encoder do
     [encode_kparam(key, params), ":", Enum.intersperse(val, delim), "\n"]
   end
 
-  def encode_prop(key, {vals, params, type}, spec) when is_list(vals) do
+  def encode_prop(key, {vals, params, type}, _spec) when is_list(vals) do
     Enum.map(vals, &encode_prop(key, {&1, params, type}))
   end
 
-  def encode_prop(key, {val, params, type}, spec) do
+  def encode_prop(key, {val, params, type}, _spec) do
     # take any extra params the field encoding might have given
     {val, params} =  case encode_val(val, type) do
       {val, extra_params} ->

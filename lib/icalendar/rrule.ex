@@ -105,21 +105,21 @@ defmodule ICalendar.RRULE do
   counterparts.
   """
   def string_to_atom_keys, do: @string_to_atom_keys
-  def string_to_atom_keys(:inverted), do: _atom_to_string_keys
+  def string_to_atom_keys(:inverted), do: _atom_to_string_keys()
 
   @doc ~S"""
   Produces a list of valid RRULE frequencies and their %ICalendar.RRULE{}
   counterparts.
   """
   def frequencies, do: @frequencies
-  def frequencies(:inverted), do: _inverted_frequencies
+  def frequencies(:inverted), do: _inverted_frequencies()
 
   @doc ~S"""
   Produces a list of valid RRULE days and their %ICalendar.RRULE{}
   counterparts.
   """
   def days, do: @days
-  def days(:inverted), do: _inverted_days
+  def days(:inverted), do: _inverted_days()
 
   @doc ~S"""
   This function is used to determine whether an RRULE struct has errors or not
@@ -193,10 +193,10 @@ defmodule ICalendar.RRULE do
     key =
       case Map.fetch(@string_to_atom_keys, key) do
         {:ok, atom} -> atom
-        {:error, _reason} ->
-            key
-            |> String.downcase
-            |> String.to_atom
+        :error ->
+          key
+          |> String.downcase
+          |> String.to_atom
       end
 
     Map.put(accumulator, key, value)
