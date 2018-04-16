@@ -4,6 +4,18 @@ defmodule ICalendar.Util.RRULE do
   """
 
   @doc ~S"""
+  Some clients rely on FREQ coming first, COUNT or UNTIL next, then others
+  even though against spec (http://www.kanzaki.com/docs/ical/recur.html#descr)
+  Apple Calendar, I'm looking at you
+  """
+  def order_conventionally(keys) do
+    first_keys = [:frequency, :count, :until, :interval]
+    last_keys = keys -- first_keys
+
+    first_keys ++ last_keys
+  end
+
+  @doc ~S"""
   This function is used by the Value module to serialize %RRULE{} structs
   into RRULE iCalendar strings.
 

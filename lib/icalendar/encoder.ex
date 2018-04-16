@@ -1,5 +1,6 @@
 defmodule ICalendar.Encoder do
   alias ICalendar.RFC6868
+  alias ICalendar.Util
   import ICalendar, only: [__props__: 1]
 
   @types %{
@@ -180,8 +181,13 @@ defmodule ICalendar.Encoder do
   end
 
   def encode_val(val, :recur) do
-    #TODO:
-    ""
+    val
+    |> Map.from_struct
+    |> Map.keys
+    |> Util.RRULE.order_conventionally
+    |> Enum.map(&(Util.RRULE.serialize(val, &1)))
+    |> Enum.reject(&(&1 == nil))
+    |> Enum.join(";")
   end
 
   @escape ~r/\\|;|,|\n/
