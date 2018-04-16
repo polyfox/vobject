@@ -233,9 +233,10 @@ defmodule ICalendar.Decoder do
   end
 
   @doc ~S"""
-  This function is designed to parse iCal datetime strings into erlang dates.
+  This function is designed to parse iCal datetime strings into elixir
+  DateTime/NaiveDateTime.
 
-  It should be able to handle dates from the past:
+  It should be able to handle datetimes from the past:
 
       iex> {:ok, date} = ICalendar.Decoder.to_datetime("19930407T153022Z")
       ...> Timex.to_erl(date)
@@ -247,7 +248,7 @@ defmodule ICalendar.Decoder do
       ...> Timex.to_erl(date)
       {{3993, 4, 7}, {15, 30, 22}}
 
-  And should return error for incorrect dates:
+  And should return error for incorrect values:
 
       iex> ICalendar.Decoder.to_datetime("1993/04/07")
       {:error, :invalid_format}
@@ -271,12 +272,11 @@ defmodule ICalendar.Decoder do
   def to_datetime(date_string, %{}) do
     # it's utc
     if String.ends_with?(date_string, "Z") do
+      # trim trailing Z?
       {:ok, naive_datetime} = to_datetime(date_string)
       DateTime.from_naive(naive_datetime, "Etc/UTC")
     else # its a relative date, parse as naive datetime
-      date_string
-      |> String.trim_trailing("Z")
-      |> to_datetime()
+      to_datetime(date_string)
     end
   end
 
@@ -311,21 +311,33 @@ defmodule ICalendar.Decoder do
   end
 
   def to_time(time_string, %{tzid: timezone}) do
-    time_string =
-      case String.last(time_string) do
-        "Z" -> time_string
-        _   -> time_string <> "Z"
-      end
+    {:ok, time} =
+      time_string
+      |> String.trim_trailing("Z")
+      |> to_time()
 
-    Timex.parse(time_string <> timezone, "{h24}{m}{s}Z{Zname}")
+    {:ok, %{time | time_zone: timezone}}
   end
 
   def to_time(time_string, %{}) do
-    to_time(time_string, %{tzid: "Etc/UTC"})
+    if String.ends_with?(time_string, "Z") do # it's utc
+      {:ok, time} = to_time(time_string)
+      %{time | time_zone: "Etc/UTC"}
+    else # its a relative date, parse as naive datetime
+      to_time(time_string)
+    end
   end
 
-  def to_time(time_string) do
-    to_time(time_string, %{tzid: "Etc/UTC"})
+  def to_time(string) do
+    with <<hour::2-bytes, min::2-bytes, sec::2-bytes, _rest::binary>> <- string,
+         {hour, ""} <- Integer.parse(hour),
+         {minute, ""} <- Integer.parse(min),
+         {second, ""} <- Integer.parse(sec) do
+         ICalendar.Time.new(hour, minute, second)
+    else
+      {:error, reason} -> {:error, reason}
+      _ -> {:error, :invalid_format}
+    end
   end
 
   @doc ~S"""

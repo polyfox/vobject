@@ -207,7 +207,7 @@ defmodule ICalendar.Encoder do
     zero_pad(val.hour, 2) <> zero_pad(val.minute, 2) <> zero_pad(val.second, 2) <> "Z"
   end
 
-  def encode_val(%{time_zone: time_zone} = val, :time) do
+  def encode_val(%{time_zone: time_zone} = val, :time) when not is_nil(time_zone) do
     {
       zero_pad(val.hour, 2) <> zero_pad(val.minute, 2) <> zero_pad(val.second, 2),
       %{tzid: time_zone}

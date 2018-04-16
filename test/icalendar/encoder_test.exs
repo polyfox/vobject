@@ -55,10 +55,14 @@ defmodule ICalendar.EncoderTest do
   end
 
   test "properly encode time" do
-    {:ok, time} = Timex.parse("173015ZAmerica/Los_Angeles", "{h24}{m}{s}Z{Zname}")
+    {:ok, time} = ICalendar.Time.new(17, 30, 15, "America/Los_Angeles")
     assert Encoder.encode_val(time, :time) == {"173015", %{tzid: "America/Los_Angeles"}}
 
     time = ~T[13:00:07]
+    assert Encoder.encode_val(time, :time) == "130007"
+
+    time = ~T[13:00:07]
+    {:ok, time} = ICalendar.Time.from_time(time)
     assert Encoder.encode_val(time, :time) == "130007"
   end
 
