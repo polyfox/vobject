@@ -75,8 +75,6 @@ defmodule ICalendar.Decoder do
     # parse the value, potentially using VALUE or any other param in the process
     spec = __props__(key)
     val = parse_val(val, spec, params)
-    # HAXX: I wish we could skip this
-    type = to_key(params[:value] || spec[:default])
 
     # drop value, we already used it while parsing
     {key, {val, Map.drop(params, [:value])}}
