@@ -79,7 +79,7 @@ defmodule ICalendar.Decoder do
     type = to_key(params[:value] || spec[:default])
 
     # drop value, we already used it while parsing
-    {key, {val, Map.drop(params, [:value]), type}}
+    {key, {val, Map.drop(params, [:value])}}
   end
 
   # because of how params work, the value delimiter ":" could be included inside
@@ -129,7 +129,7 @@ defmodule ICalendar.Decoder do
   # Per type parsing procedures
 
   def parse_type(val, :binary, %{encoding: "BASE64"}) do
-    Base.decode64(val)
+    %ICalendar.Binary{val: Base.decode64(val)}
   end
 
   def parse_type("TRUE", :boolean, _params), do: {:ok, true}
@@ -137,7 +137,7 @@ defmodule ICalendar.Decoder do
   def parse_type(_, :boolean, _params), do: {:error, :invalid_boolean}
 
   # TODO
-  def parse_type(val, :cal_address, _params), do: {:ok, val}
+  def parse_type(val, :cal_address, _params), do: {:ok, %ICalendar.Address{val: val}}
 
   def parse_type(val, :date, _params), do: to_date(val)
 
@@ -192,10 +192,10 @@ defmodule ICalendar.Decoder do
 
   def parse_type(val, :time, params), do: to_time(val, params)
 
-  def parse_type(val, :uri, _params), do: {:ok, val}
+  def parse_type(val, :uri, _params), do: {:ok, URI.parse(val)}
 
   # TODO (not sure what the best way to store this is)
-  def parse_type(val, :utc_offset, _params), do: {:ok, val}
+  def parse_type(val, :utc_offset, _params), do: {:ok, %ICalendar.UTCOffset{val: val}}
 
   # this could be x-vals
   def parse_type(val, :unknown, _), do: {:ok, val}

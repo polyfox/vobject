@@ -1,128 +1,161 @@
 defprotocol ICalendar.Value do
   @fallback_to_any true
-  def to_ics(data)
+  @spec encode(value :: term, params :: map) :: {iodata, type :: atom}
+  def encode(value, params \\ %{})
 end
 
 alias ICalendar.Value
-alias ICalendar.Util.RRULE, as: Util
-
-defimpl Value, for: ICalendar.RRULE do
-  @doc """
-  This function converts RRULE structs into an RRULE string
-  """
-  def to_ics(rrule = %ICalendar.RRULE{}) do
-    rrule
-    |> Map.from_struct
-    |> Map.keys
-    |> order_conventionally
-    |> Enum.map(&(Util.serialize(rrule, &1)))
-    |> Enum.reject(&(&1 == nil))
-    |> Enum.join(";")
-  end
-
-  # some clients rely on FREQ coming first, COUNT or UNTIL next, then others
-  # even though against spec (http://www.kanzaki.com/docs/ical/recur.html#descr)
-  # Apple Calendar, I'm looking at you
-  defp order_conventionally(keys) do
-    first_keys = [:frequency, :count, :until, :interval]
-    last_keys = keys -- first_keys
-
-    first_keys ++ last_keys
-  end
-end
-
-defimpl Value, for: BitString do
-  def to_ics(x) do
-    x
-    |> String.replace(~S"\n", ~S"\\n")
-    |> String.replace("\n", ~S"\n")
-  end
-end
 
 defimpl Value, for: Tuple do
-  defmacro elem2(x, i1, i2) do
-    quote do
-      unquote(x) |> elem(unquote(i1)) |> elem(unquote(i2))
-    end
+  def encode(vals, _opts) do
+    vals
+    |> Tuple.to_list()
+    |> Enum.map(&Value.encode/1)
+    |> Enum.join(";") # TODO configurable per field
   end
-
-  @doc """
-  This macro is used to establish whether a tuple is in the Erlang Timestamp
-  format (`{{year, month, day}, {hour, minute, second}}`).
-  """
-  defmacro is_datetime_tuple(x) do
-    quote do
-      # Year
-      ( unquote(x) |> elem2(0, 0)  |> is_integer) and
-      # Month
-      ( unquote(x) |> elem2(0, 1)  |> is_integer) and
-      ((unquote(x) |> elem2(0, 1)) <= 12) and
-      ((unquote(x) |> elem2(0, 1)) >= 1) and
-      # Day
-      ( unquote(x) |> elem2(0, 2)  |> is_integer) and
-      ((unquote(x) |> elem2(0, 2)) <= 31) and
-      ((unquote(x) |> elem2(0, 2)) >= 1) and
-      # Hour
-      ( unquote(x) |> elem2(1, 0)  |> is_integer) and
-      ((unquote(x) |> elem2(1, 0)) <= 23) and
-      ((unquote(x) |> elem2(1, 0)) >= 0) and
-      # Minute
-      ( unquote(x) |> elem2(1, 1)  |> is_integer) and
-      ((unquote(x) |> elem2(1, 1)) <= 59) and
-      ((unquote(x) |> elem2(1, 1)) >= 0) and
-      # Second
-      ( unquote(x) |> elem2(1, 2)  |> is_integer) and
-      ((unquote(x) |> elem2(1, 2)) <= 60) and
-      ((unquote(x) |> elem2(1, 2)) >= 0)
-    end
-  end
-
-  @doc """
-  This function converts Erlang timestamp tuples into DateTimes.
-  """
-  def to_ics(timestamp) when is_datetime_tuple(timestamp) do
-    timestamp
-    |> Timex.to_datetime
-    |> Value.to_ics
-  end
-
-  def to_ics(x), do: x
 end
 
-defimpl Value, for: DateTime do
-  use Timex
+defimpl Value, for: ICalendar.Binary do
+  def encode(val, _opts) do
+    Binary.encode64(val.val)
+  end
+end
 
-  @doc """
-  This function converts DateTimes to UTC timezone and then into Strings in the
-  iCal format
-  """
-  def to_ics(%DateTime{} = timestamp) do
-    format_string = "{YYYY}{0M}{0D}T{h24}{m}{s}"
+defimpl Value, for: Atom do
+  def encode(nil, _),   do: ""
+  def encode(true, _),  do: "TRUE"
+  def encode(false, _), do: "FALSE"
 
-    {:ok, result} =
-      timestamp
-      |> Timex.format(format_string)
-    result
+  def encode(atom, _options) do
+    Atom.to_string(atom)
+  end
+end
+
+defimpl Value, for: ICalendar.Address do
+  def encode(val, opts) do
+    val.val
   end
 end
 
 defimpl Value, for: Date do
-  use Timex
-
-  @doc """
-  This function converts DateTimes to UTC timezone and then into Strings in the
-  iCal format
-  """
-  def to_ics(%Date{} = timestamp) do
-    format_string = "{YYYY}{0M}{0D}"
-
-    {:ok, result} =
-      timestamp
-      |> Timex.format(format_string)
-    result
+  import ICalendar.Util, only: [zero_pad: 2]
+  def encode(val, _) do
+    zero_pad(val.year, 4) <> zero_pad(val.month, 2) <> zero_pad(val.day, 2)
   end
 end
 
-defimpl Value, for: Any do
-  def to_ics(x), do: x
+defimpl Value, for: DateTime do
+  def encode(%{time_zone: "Etc/UTC"} = val, _options) do
+    date = Value.encode(DateTime.to_date(val))
+    time = Value.encode(DateTime.to_time(val))
+    date <> "T" <> time
+  end
+
+  def encode(%{time_zone: time_zone} = val, _options) do
+    date = Value.encode(DateTime.to_date(val))
+    time = Value.encode(DateTime.to_time(val))
+    {
+      date <> "T" <> time,
+      %{tzid: time_zone}
+    }
+  end
+end
+
+defimpl Value, for: NaiveDateTime do
+  def encode(val, _options) do
+    date = Value.encode(NaiveDateTime.to_date(val))
+    time = Value.encode(NaiveDateTime.to_time(val))
+    date <> "T" <> time
+  end
+end
+
+defimpl Value, for: Timex.Duration do
+  def encode(val, _options) do
+    string = Timex.Format.Duration.Formatter.format(val)
+    if (val.seconds < 0) || (val.megaseconds < 0) || (val.microseconds < 0) do
+      "-" <> string
+    else
+      string
+    end
+  end
+end
+
+defimpl Value, for: Float do
+  def encode(val, _opts), do: to_string(val)
+end
+
+defimpl Value, for: Integer do
+  def encode(val, _opts), do: to_string(val)
+end
+
+defimpl Value, for: ICalendar.Period do
+  def encode(val, _opts) do
+    from = Value.encode(val.from)
+    until = Value.encode(val.until)
+    from <> "/" <> until
+  end
+end
+
+defimpl Value, for: ICalendar.RRULE do
+  alias ICalendar.Util
+  def encode(val, _opts) do
+    val
+    |> Map.from_struct
+    |> Map.keys
+    |> Util.RRULE.order_conventionally
+    |> Enum.map(&(Util.RRULE.serialize(val, &1)))
+    |> Enum.reject(&(&1 == nil))
+    |> Enum.join(";")
+  end
+end
+
+defimpl Value, for: BitString do
+  @escape ~r/\\|;|,|\n/
+  def encode(val, _opts) do
+    # TODO: optimize: only run the regex if string contains those chars
+    Regex.replace(@escape, val, fn
+      "\\" -> "\\\\"
+      ";" ->  "\\;"
+      "," -> "\\,"
+      "\n" -> "\\n"
+      v -> v
+    end)
+  end
+end
+
+defimpl Value, for: ICalendar.Time do
+  import ICalendar.Util, only: [zero_pad: 2]
+  def encode(%{time_zone: "Etc/UTC"} = val, _opts) do
+    zero_pad(val.hour, 2) <> zero_pad(val.minute, 2) <> zero_pad(val.second, 2) <> "Z"
+  end
+
+  def encode(%{time_zone: time_zone} = val, _opts) when not is_nil(time_zone) do
+    {
+      zero_pad(val.hour, 2) <> zero_pad(val.minute, 2) <> zero_pad(val.second, 2),
+      %{tzid: time_zone}
+    }
+  end
+
+  def encode(val, _opts) do
+    zero_pad(val.hour, 2) <> zero_pad(val.minute, 2) <> zero_pad(val.second, 2)
+  end
+end
+
+defimpl Value, for: Time do
+  import ICalendar.Util, only: [zero_pad: 2]
+  def encode(val, _opts) do
+    zero_pad(val.hour, 2) <> zero_pad(val.minute, 2) <> zero_pad(val.second, 2)
+  end
+end
+
+defimpl Value, for: URI do
+  def encode(val, _opts) do
+    URI.to_string(val)
+  end
+end
+
+defimpl Value, for: ICalendar.UTCOffset do
+  def encode(val, opts) do
+    val.val
+  end
 end
