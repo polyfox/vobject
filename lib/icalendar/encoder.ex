@@ -87,7 +87,6 @@ defmodule ICalendar.Encoder do
     end
     [encode_kparam(key, params), ":", val, "\n"]
   end
-  # TODO: work with structured vals, tuple
 
   @doc "Encode a key together with parameters."
   def encode_kparam(key, params) when params == %{}, do: encode_key(key)
@@ -99,7 +98,6 @@ defmodule ICalendar.Encoder do
   @spec encode_params(params :: map) :: String.t
   def encode_params(params) do
     params
-    # TODO escape parameter vals (^)
     |> Enum.map(fn {key, val} -> encode_key(key) <> "=" <> RFC6868.escape(val) end)
     |> Enum.join(";")
   end
@@ -170,9 +168,15 @@ defmodule ICalendar.Encoder do
   def encode_val(val, :integer), do: to_string(val)
 
   def encode_val(val, :period) do
-    # TODO somehow store if period end is a duration or datetime
-    # so we can encode it again proper
-    ""
+    from = encode_val(val.from, :date_time)
+    until = case val.until do
+      %Timex.Duration{} = val ->
+        encode_val(val, :duration)
+      val ->
+        encode_val(val, :date_time)
+    end
+
+    from <> "/" <> until
   end
 
   def encode_val(val, :recur) do

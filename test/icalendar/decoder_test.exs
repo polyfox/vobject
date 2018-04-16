@@ -3,6 +3,7 @@ defmodule ICalendar.ParserTest do
   alias ICalendar.Decoder
   alias ICalendar.Event
   doctest ICalendar.Decoder
+  doctest ICalendar.Period
 
   test "basic" do
     stream = File.read!("test/fixtures/event.ics")

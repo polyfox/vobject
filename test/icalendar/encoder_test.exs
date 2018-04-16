@@ -43,7 +43,15 @@ defmodule ICalendar.EncoderTest do
   end
 
   test "properly encode period" do
-    # TODO
+    {:ok, from, _} = DateTime.from_iso8601("1996-04-03 02:00:00Z")
+    {:ok, to, _} = DateTime.from_iso8601("1996-04-03 04:00:00Z")
+    period = %ICalendar.Period{from: from, until: to}
+    assert Encoder.encode_val(period, :period) == "19960403T020000Z/19960403T040000Z"
+
+    {:ok, from, _} = DateTime.from_iso8601("1996-04-03 02:00:00Z")
+    {:ok, to} = Timex.Parse.Duration.Parsers.ISO8601Parser.parse("P1D")
+    period = %ICalendar.Period{from: from, until: to}
+    assert Encoder.encode_val(period, :period) == "19960403T020000Z/P1D"
   end
 
   test "properly encode time" do
