@@ -48,7 +48,7 @@ defimpl Value, for: DateTime do
   def encode(%{time_zone: "Etc/UTC"} = val, _options) do
     date = Value.encode(DateTime.to_date(val))
     time = Value.encode(DateTime.to_time(val))
-    date <> "T" <> time
+    date <> "T" <> time <> "Z"
   end
 
   def encode(%{time_zone: time_zone} = val, _options) do
