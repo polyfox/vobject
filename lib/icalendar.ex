@@ -3,6 +3,24 @@ defmodule ICalendar do
   Generating ICalendars
   """
 
+  @prodid "-//Polyfox//vObject 0.5.0//EN"
+
+  @spec new() :: %{:__type__ => {atom, map}, optional(atom) => {term, map}}
+  def new do
+    %{
+      # defaults
+      __type__: :calendar,
+      prodid: {@prodid, %{}},
+      version: {"2.0", %{}},
+      calscale: {"GREGORIAN", %{}},
+    }
+  end
+
+  @spec new(props :: map) :: map
+  def new(props) do
+    Map.merge(new(), props)
+  end
+
   defdelegate decode(string), to: ICalendar.Decoder
   defdelegate encode(object), to: ICalendar.Encoder
 
