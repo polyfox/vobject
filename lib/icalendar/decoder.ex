@@ -264,7 +264,8 @@ defmodule ICalendar.Decoder do
       |> String.trim_trailing("Z")
       |> to_datetime()
 
-    {:ok, Timex.to_datetime(naive_date, timezone)}
+    #{:ok, Timex.to_datetime(naive_date, timezone)}
+    Calendar.DateTime.from_naive(naive_date, timezone)
   end
 
   def to_datetime(date_string, %{}) do

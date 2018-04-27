@@ -45,6 +45,7 @@ defmodule VObject.Mixfile do
 
       # Timezones, period parsing, intervals
       {:timex, "~> 3.0"},
+      {:calendar, "~> 0.17.2"},
 
       {:eflame, "~> 1.0.1", only: :dev},
     ]
