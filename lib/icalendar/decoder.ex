@@ -3,15 +3,12 @@ defmodule ICalendar.Decoder do
   import ICalendar, only: [__props__: 1]
 
   def decode(string) do
-    val =
-      string
-      # unfold
-      |> String.replace(~r/\r?\n[ \t]/, "")
-      # split on newline or CRLF
-      |> String.split(~r/\r?\n/)
-      |> Enum.reduce([], &parse/2)
-
-    {:ok, val}
+    string
+    # unfold
+    |> String.replace(~r/\r?\n[ \t]/, "")
+    # split on newline or CRLF
+    |> String.split(~r/\r?\n/)
+    |> parse([])
   end
 
   @types %{
@@ -36,26 +33,30 @@ defmodule ICalendar.Decoder do
   end
 
   # tokenize data into a syntax tree
-  defp parse("", stack), do: stack
+  defp parse([], stack), do: {:ok, stack}
+  defp parse(["" | rest], stack), do: parse(rest, stack)
 
   # pop a new component onto the stack
-  defp parse("BEGIN:" <> type, stack) do
-    [%{__type__: @types[type]} | stack]
+  defp parse(["BEGIN:" <> type | rest], stack) do
+    parse(rest, [%{__type__: @types[type]} | stack])
   end
 
   # TODO: make sure end matches begin type
-  defp parse("END:" <> type, [obj, acc | stack]) do
+  defp parse(["END:" <> type | rest], [obj, acc | stack]) do
     acc = list_put(acc, @types[type], obj)
-    [acc | stack]
+    parse(rest, [acc | stack])
   end
   # outermost component
-  defp parse("END:" <> type, [obj]), do: obj
+  defp parse(["END:" <> type | rest], [obj]), do: parse(rest, obj)
 
-  defp parse(line, [obj | stack]) do
-    {key, prop} = parse_line(line)
-
-    obj = list_put(obj, key, prop)
-    [obj | stack]
+  defp parse([line | rest], [obj | stack]) do
+    case parse_line(line) do
+      {:ok, {key, prop}} ->
+        obj = list_put(obj, key, prop)
+        parse(rest, [obj | stack])
+      {:error, reason} ->
+        {:error, {reason, line}}
+    end
   end
 
   defp list_put(map, key, item) do
@@ -74,10 +75,15 @@ defmodule ICalendar.Decoder do
     key = to_key(key)
     # parse the value, potentially using VALUE or any other param in the process
     spec = __props__(key)
-    val = parse_val(val, spec, params)
 
-    # drop value, we already used it while parsing
-    {key, {val, Map.drop(params, [:value])}}
+    case parse_val(val, spec, params) do
+      {:ok, val} ->
+        # drop value, we already used it while parsing
+        {:ok, {key, {val, Map.drop(params, [:value])}}}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
   end
 
   # because of how params work, the value delimiter ":" could be included inside
@@ -106,22 +112,31 @@ defmodule ICalendar.Decoder do
 
   # Use the typing data to parse a value
   def parse_val(val, %{multi: delim} = spec, params) do
-    val
-    |> String.split(delim)
-    |> Enum.map(fn val -> parse_val(val, Map.drop(spec, [:multi]), params) end)
+    val =
+      val
+      |> String.split(delim)
+      |> Enum.map(fn val ->
+        {:ok, val} = parse_val(val, Map.drop(spec, [:multi]), params)
+        val
+      end)
+    {:ok, val}
   end
 
   def parse_val(val, %{structured: delim} = spec, params) do
-    val
-    |> String.split(delim)
-    |> Enum.map(fn val -> parse_val(val, Map.drop(spec, [:structured]), params) end)
-    |> List.to_tuple()
+    val =
+      val
+      |> String.split(delim)
+      |> Enum.map(fn val ->
+        {:ok, val} = parse_val(val, Map.drop(spec, [:structured]), params)
+        val
+      end)
+      |> List.to_tuple()
+    {:ok, val}
   end
 
   def parse_val(val, spec, params) do
     type = to_key(params[:value]) || spec[:default]
-    {:ok, val} = parse_type(val, type, params)
-    val
+    parse_type(val, type, params)
   end
 
   # Per type parsing procedures

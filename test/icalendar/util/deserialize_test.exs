@@ -2,7 +2,7 @@ defmodule ICalendar.Util.DeserializeTest do
   use ExUnit.Case
   alias ICalendar.Util.Deserialize
   alias ICalendar.Event
-  doctest ICalendar.Util.Deserialize
+  #doctest ICalendar.Util.Deserialize
 
   test "Convert iCal String to event Struct" do
     event =
@@ -14,9 +14,9 @@ defmodule ICalendar.Util.DeserializeTest do
       DTSTART:20151224T083000Z
       END:VEVENT
       """
-      |> String.trim
+      |> String.trim()
       |> String.split("\n")
-      |> Deserialize.build_event
+      |> Deserialize.build_event()
 
     assert event == {:ok, %Event{
       description: "Escape from the world. Stare at some water.",
@@ -33,9 +33,9 @@ defmodule ICalendar.Util.DeserializeTest do
       BEGIN:VEVENT
       END:VEVENT
       """
-      |> String.trim
+      |> String.trim()
       |> String.split("\n")
-      |> Deserialize.build_event
+      |> Deserialize.build_event()
 
     assert event == {:ok, %Event{
       dtstart: nil,

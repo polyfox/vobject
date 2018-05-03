@@ -37,15 +37,14 @@ defmodule ICalendar.DeserializeTest do
       """
       event = ICalendar.from_ics(bad_ics)
       assert event ==
-        {:error, ["DTSTART: Expected `1-4 digit year` at line 1, column 1."]}
+        {:error, ["DTSTART: Expected `1-4 digit year` at line 1, column 1."],
         description: "Escape from the world. Stare at some water.",
         location: "123 Fun Street, Toronto ON, Canada",
         status: "tentative",
         categories: ["Fishing", "Nature"],
         comment: "Don't forget to take something to eat !",
         class: "private",
-        geo: {43.6978819, -79.3810277}
-      }
+        geo: {43.6978819, -79.3810277}}
     end
 
     test "with Timezone" do
