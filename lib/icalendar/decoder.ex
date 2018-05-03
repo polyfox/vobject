@@ -274,21 +274,27 @@ defmodule ICalendar.Decoder do
       [{{1998, 1, 19}, {2, 0, 0}}, "America/Chicago"]
   """
   def to_datetime(date_string, %{tzid: timezone}) do
-    {:ok, naive_date} =
-      date_string
-      |> String.trim_trailing("Z")
-      |> to_datetime()
-
-    #{:ok, Timex.to_datetime(naive_date, timezone)}
-    Calendar.DateTime.from_naive(naive_date, timezone)
+    date_string
+    |> String.trim_trailing("Z")
+    |> to_datetime()
+    |> case do
+      {:ok, naive_date} ->
+        #{:ok, Timex.to_datetime(naive_date, timezone)}
+        Calendar.DateTime.from_naive(naive_date, timezone)
+      err -> err
+    end
   end
 
   def to_datetime(date_string, %{}) do
     # it's utc
     if String.ends_with?(date_string, "Z") do
       # trim trailing Z?
-      {:ok, naive_datetime} = to_datetime(date_string)
-      DateTime.from_naive(naive_datetime, "Etc/UTC")
+      case to_datetime(date_string) do
+        {:ok, naive_datetime} ->
+          DateTime.from_naive(naive_datetime, "Etc/UTC")
+        err ->
+          err
+      end
     else # its a relative date, parse as naive datetime
       to_datetime(date_string)
     end
