@@ -89,11 +89,17 @@ defmodule ICalendar.Util.RRULE do
       0 -> nil
       _ ->
         value
-        |> Enum.map(fn(val) ->
-          case Map.fetch(days, val) do
-            {:ok, day} -> day
-            :error     -> nil
-          end
+        |> Enum.map(fn
+          {num, val} ->
+            case Map.fetch(days, val) do
+              {:ok, day} -> to_string(num) <> day
+              :error     -> nil
+            end
+          val ->
+            case Map.fetch(days, val) do
+              {:ok, day} -> day
+              :error     -> nil
+            end
         end)
         |> Enum.join(",")
     end

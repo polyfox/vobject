@@ -130,6 +130,29 @@ defmodule ICalendar.ParserTest do
       }
   end
 
+    test "RRULE parsing" do
+    str = ~s"""
+BEGIN:VCALENDAR
+BEGIN:VTIMEZONE
+LAST-MODIFIED:20040110T032845Z
+TZID:US/Eastern
+BEGIN:DAYLIGHT
+DTSTART:20000404T020000
+RRULE:FREQ=YEARLY;BYDAY=1SU;BYMONTH=4
+TZNAME:EDT
+TZOFFSETFROM:-0500
+TZOFFSETTO:-0400
+END:DAYLIGHT
+END:VTIMEZONE
+END:VCALENDAR
+"""
+
+    IO.puts str
+    {:ok, res} = Decoder.decode(str)
+    IO.puts ICalendar.Encoder.encode(res)
+
+    end
+
   test "failing duration 1PDT" do
     str = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//PYVOBJECT//NONSGML Version 1//EN\nBEGIN:VEVENT\nUID:put-6@example.com\nDTSTART;VALUE=DATE:20190427\nDURATION:P1DT\nDTSTAMP:20051222T205953Z\nX-TEST;CN=George Herman ^'Babe^' Ruth:test\nX-TEXT;P=Hello^World:test\nSUMMARY:event 6\nEND:VEVENT\nEND:VCALENDAR\n"
     {:ok, res} = Decoder.decode(str)
